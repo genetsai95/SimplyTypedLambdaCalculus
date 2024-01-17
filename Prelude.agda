@@ -79,6 +79,9 @@ app-≡' refl refl = refl
 η-exp-≡ : {X : Set}{Y : X → Set}{f g : (x : X) → Y x} → f ≡ g → ((λ x → f x) ≡ (λ x → g x))
 η-exp-≡ refl = refl
 
+transport : {A : Set}(B : A → Set){x y : A} → x ≡ y → B x → B y
+transport _ refl bx = bx
+
 _≢_ : {X : Set}(x y : X) → Set
 x ≢ y = (x ≡ y) → ⊥
 
