@@ -190,3 +190,19 @@ lem[sub1] t ts s = subst t (ts ↑) [ s /x]
                             ≡⟨ refl ⟩ subst (subst t (ts ↑)) (s ∷ idSub)
                             ≡⟨ subsub t ⟩ subst t ((ts ↑) ⊙ (s ∷ idSub))
                             ≡⟨ cong (subst t) (ts ↑⊙ s ∷id) ⟩ subst t (s ∷ ts) ∎
+
+subst-rename≡rename-subst' : ∀{σ} → (ρ : Ren Γ Δ){s : Γ ⊢ τ}(x : τ ∷ Γ ∋ σ) → subst (rename (lift ρ) (` x)) (rename ρ s ∷ idSub) ≡ rename ρ (subst (` x) (s ∷ idSub))
+subst-rename≡rename-subst' ρ ze = refl
+subst-rename≡rename-subst' ρ {s} (su x) = lookup (lookupRen x (mapRen su ρ)) (rename ρ s ∷ idSub)
+                                        ≡⟨ cong (λ y → lookup y (rename ρ s ∷ idSub)) (lookupRen-map su x refl) ⟩ 
+                                          lookup (lookupRen x ρ) idSub
+                                        ≡⟨ lookup-idSub {x = lookupRen x ρ} ⟩ 
+                                         (` lookupRen x ρ)
+                                        ≡⟨ refl ⟩
+                                          rename ρ (` x)
+                                        ≡⟨ cong (rename ρ) (≡-sym (lookup-idSub {x = x})) ⟩ 
+                                          rename ρ (lookup x idSub)
+                                        ∎
+
+subst-rename≡rename-subst : (ρ : Ren Γ Δ)(t : τ ∷ Γ ⊢ σ){s : Γ ⊢ τ} → subst (rename (lift ρ) t) (rename ρ s ∷ idSub) ≡ rename ρ (subst t (s ∷ idSub))
+subst-rename≡rename-subst ρ t {s} = sr-rs-eq {ρ = lift ρ} {rename ρ s ∷ idSub} {s ∷ idSub} {ρ} (subst-rename≡rename-subst' ρ) t
