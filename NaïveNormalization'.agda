@@ -20,75 +20,89 @@ data Normal where
     ƛ_ : {t : σ ∷ Γ ⊢ τ} → Normal (σ ∷ Γ) τ t → Normal Γ (σ ⇒ τ) (ƛ t)
 
 Comp : (σ : Type) → Γ ⊢ σ → Set
-Comp {Γ} Ans t = Σ (Γ ⊢ Ans) (λ t' → Normal Γ Ans t' × (t' ≡ t))
+Comp {Γ} Ans t = Σ (Γ ⊢ Ans) (λ t' → (t →β* t') × Normal Γ Ans t')
 Comp 𝟙 t = ⊤
-Comp (σ ẋ τ) t = Comp σ (π₁ t) × Comp τ (π₂ t)
-Comp {Γ} (σ ⇒ τ) t = (Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) → Comp τ ((rename ρ t) · a)
-
-comp-β-π₁ : {t : Γ ⊢ σ}{s : Γ ⊢ τ} → Comp σ (π₁ (t , s)) → Comp σ t
-comp-β-π₁ u = {!   !}
+Comp {Γ} (σ ẋ τ) t = Σ (Γ ⊢ σ) (λ t' → Σ (Γ ⊢ τ) (λ t'' → (π₁ t →β* t') × (π₂ t →β* t'') × Comp σ t' × Comp τ t''))
+Comp {Γ} (σ ⇒ τ) t = Σ (Γ ⊢ σ ⇒ τ) (λ t' → (t →β* t') × ((Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) → Comp τ ((rename ρ t') · a)))
 
 ⟦_⟧ᶜ : Cxt → Cxt → Set
 ⟦ Γ ⟧ᶜ Δ = Sub Γ Δ
 
-⟦_⟧ˢ : (Γ : Cxt) → ⟦ Γ ⟧ᶜ Δ → Set
-⟦ Γ ⟧ˢ ts = ∀{τ} → (x : Γ ∋ τ) → Comp τ (lookup x ts)
+_[_] : Γ ⊢ σ → ⟦ Γ ⟧ᶜ Δ → Δ ⊢ σ
+t [ ts ] = subst t ts
+
+infix 25 _[_]
+
+data ⟦_⟧ˢ : (Γ : Cxt) → ⟦ Γ ⟧ᶜ Δ → Set where
+    [] : ∀{Δ} → ⟦ [] ⟧ˢ ([] {Δ})
+    _∷_ : ∀{σ} → {t : Δ ⊢ σ}{ts : ⟦ Γ ⟧ᶜ Δ} → Comp σ t → ⟦ Γ ⟧ˢ ts → ⟦ (σ ∷ Γ) ⟧ˢ (t ∷ ts)
+
+lookupˢ : {ts : ⟦ Γ ⟧ᶜ Δ}(x : Γ ∋ σ) → ⟦ Γ ⟧ˢ ts → Comp σ (lookup x ts)
+lookupˢ ze (c ∷ _) = c
+lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 
 
-ext-s : {ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → {t : Δ ⊢ σ} → Comp σ t → ⟦ σ ∷ Γ ⟧ˢ (t ∷ ts)
-ext-s u s ze = s
-ext-s u s (su x) = u x
+-- rename-nf : (ρ : Ren Γ Δ){t : Γ ⊢ σ} → Normal Γ σ t → Normal Δ σ (rename ρ t)
+-- rename-ne : (ρ : Ren Γ Δ){t : Γ ⊢ σ} → Neutral Γ σ t → Neutral Δ σ (rename ρ t)
 
-rename-nf : (ρ : Ren Γ Δ){t : Γ ⊢ σ} → Normal Γ σ t → Normal Δ σ (rename ρ t)
-rename-ne : (ρ : Ren Γ Δ){t : Γ ⊢ σ} → Neutral Γ σ t → Neutral Δ σ (rename ρ t)
+-- rename-nf ρ yes = yes
+-- rename-nf ρ no = no
+-- rename-nf ρ (‘ x) = ‘ rename-ne ρ x
+-- rename-nf ρ ⟨⟩ = ⟨⟩
+-- rename-nf ρ (n₁ , n₂) = rename-nf ρ n₁ , rename-nf ρ n₂
+-- rename-nf ρ (ƛ n) = ƛ rename-nf (lift ρ) n
 
-rename-nf ρ yes = yes
-rename-nf ρ no = no
-rename-nf ρ (‘ x) = ‘ rename-ne ρ x
-rename-nf ρ ⟨⟩ = ⟨⟩
-rename-nf ρ (n₁ , n₂) = rename-nf ρ n₁ , rename-nf ρ n₂
-rename-nf ρ (ƛ n) = ƛ rename-nf (lift ρ) n
+-- rename-ne ρ (` x) = ` lookupRen x ρ
+-- rename-ne ρ (π₁ n) = π₁ (rename-ne ρ n)
+-- rename-ne ρ (π₂ n) = π₂ (rename-ne ρ n)
+-- rename-ne ρ (n · x) = rename-ne ρ n · rename-nf ρ x
 
-rename-ne ρ (` x) = ` lookupRen x ρ
-rename-ne ρ (π₁ n) = π₁ (rename-ne ρ n)
-rename-ne ρ (π₂ n) = π₂ (rename-ne ρ n)
-rename-ne ρ (n · x) = rename-ne ρ n · rename-nf ρ x
+-- comp-under-rename : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
+-- comp-under-rename {σ = Ans} ρ t (t' , nt' , eq') = rename ρ t' , (rename-nf ρ nt' , cong (rename ρ) eq')
+-- comp-under-rename {σ = 𝟙} _ _ _ = `nil
+-- comp-under-rename {σ = σ ẋ τ} ρ t (c₁ , c₂) = comp-under-rename ρ (π₁ t) c₁ , comp-under-rename ρ (π₂ t) c₂
+-- comp-under-rename {σ = σ ⇒ τ} ρ t c Θ ρ' a u = {!  c ? ? a u  !} --comp-under-rename ρ t c Θ ρ' a u
 
-comp-under-rename : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
-comp-under-rename {σ = Ans} ρ t (t' , nt' , eq') = rename ρ t' , (rename-nf ρ nt' , cong (rename ρ) eq')
-comp-under-rename {σ = 𝟙} _ _ _ = `nil
-comp-under-rename {σ = σ ẋ τ} ρ t (c₁ , c₂) = comp-under-rename ρ (π₁ t) c₁ , comp-under-rename ρ (π₂ t) c₂
-comp-under-rename {σ = σ ⇒ τ} ρ t c Θ ρ' a u = {!  c ? ? a u  !} --comp-under-rename ρ t c Θ ρ' a u
+-- rename-c : Ren Δ Θ → ⟦ Γ ⟧ᶜ Δ → ⟦ Γ ⟧ᶜ Θ
+-- rename-c ρ = mapSub (rename ρ)
 
-rename-c : Ren Δ Θ → ⟦ Γ ⟧ᶜ Δ → ⟦ Γ ⟧ᶜ Θ
-rename-c ρ = mapSub (rename ρ)
+-- rename-s : {ρ : Ren Δ Θ}{ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (rename-c ρ ts)
+-- rename-s u x = {! u x   !}
 
-rename-s : {ρ : Ren Δ Θ}{ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (rename-c ρ ts)
-rename-s u x = {! u x   !}
+⟦_⟧ : (t : Γ ⊢ σ) → (Δ : Cxt)(ts : ⟦ Γ ⟧ᶜ Δ)(cs : ⟦ Γ ⟧ˢ ts) → Comp σ (t [ ts ])
+⟦ ` x ⟧ Δ ts cs = {!   !}
+⟦ yes ⟧ Δ ts cs = {!   !}
+⟦ no ⟧ Δ ts cs = {!   !}
+⟦ ⟨⟩ ⟧ Δ ts cs = {!   !}
+⟦ t , t₁ ⟧ Δ ts cs = {!   !}
+⟦ π₁ t ⟧ Δ ts cs = {!   !}
+⟦ π₂ t ⟧ Δ ts cs = {!   !}
+⟦ t · t₁ ⟧ Δ ts cs = {!   !}
+⟦ ƛ t ⟧ Δ ts cs = {!   !}
 
-⟦_⟧ : (t : Γ ⊢ σ) → (Δ : Cxt)(ts : ⟦ Γ ⟧ᶜ Δ)(u : ⟦ Γ ⟧ˢ ts) → Comp σ (subst t ts)
-⟦ ` x ⟧ Δ a u = u x
-⟦ yes ⟧ Δ a u = yes , (yes , refl)
-⟦ no ⟧ Δ a u = no , (no , refl)
-⟦ ⟨⟩ ⟧ Δ a u = `nil
-⟦ t , s ⟧ Δ a u = {!   !} -- ⟦ t ⟧ Δ a u , ⟦ s ⟧ Δ a u
-⟦ π₁ t ⟧ Δ a u = pr₁ (⟦ t ⟧ Δ a u)
-⟦ π₂ t ⟧ Δ a u = pr₂ (⟦ t ⟧ Δ a u)
-⟦ t · s ⟧ Δ a u = {!   !} -- ⟦ t ⟧ Δ a u Δ (λ x → x) (subst a s) (⟦ s ⟧ Δ a u)
-⟦ ƛ t ⟧ Δ a u = λ Θ ρ a' u' → {!   !} -- ⟦ t ⟧ Θ (ext-c (rename-c ρ a) a') (ext-s (rename-s u) u')
+-- ⟦_⟧ : (t : Γ ⊢ σ) → (Δ : Cxt)(ts : ⟦ Γ ⟧ᶜ Δ)(u : ⟦ Γ ⟧ˢ ts) → Comp σ (subst t ts)
+-- ⟦ ` x ⟧ Δ a u = u x
+-- ⟦ yes ⟧ Δ a u = yes , (yes , refl)
+-- ⟦ no ⟧ Δ a u = no , (no , refl)
+-- ⟦ ⟨⟩ ⟧ Δ a u = `nil
+-- ⟦ t , s ⟧ Δ a u = {!   !} -- ⟦ t ⟧ Δ a u , ⟦ s ⟧ Δ a u
+-- ⟦ π₁ t ⟧ Δ a u = pr₁ (⟦ t ⟧ Δ a u)
+-- ⟦ π₂ t ⟧ Δ a u = pr₂ (⟦ t ⟧ Δ a u)
+-- ⟦ t · s ⟧ Δ a u = {!   !} -- ⟦ t ⟧ Δ a u Δ (λ x → x) (subst a s) (⟦ s ⟧ Δ a u)
+-- ⟦ ƛ t ⟧ Δ a u = λ Θ ρ a' u' → {!   !} -- ⟦ t ⟧ Θ (ext-c (rename-c ρ a) a') (ext-s (rename-s u) u')
 
-⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → ∃[ t' ∶ Γ ⊢ σ ] Normal Γ σ t'
-⇑ : (Γ : Cxt)(σ : Type) → ((n' , _) : ∃[ n ∶ Γ ⊢ σ ] Neutral Γ σ n) → Comp σ n'
+-- ⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → ∃[ t' ∶ Γ ⊢ σ ] Normal Γ σ t'
+-- ⇑ : (Γ : Cxt)(σ : Type) → ((n' , _) : ∃[ n ∶ Γ ⊢ σ ] Neutral Γ σ n) → Comp σ n'
 
-⇓ Γ Ans (t , p) = t , pr₁ p
-⇓ Γ 𝟙 u = ⟨⟩ , ⟨⟩
-⇓ Γ (σ ẋ τ) (u , v) with ⇓ Γ σ u | ⇓ Γ τ v
-... | (t , nt) | (s , ns) = (t , s) , (nt , ns)
-⇓ Γ (σ ⇒ τ) u with ⇓ (σ ∷ Γ) τ (u (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))))
-... | (t , nt) = (ƛ t) , (ƛ nt)
+-- ⇓ Γ Ans (t , p) = t , pr₁ p
+-- ⇓ Γ 𝟙 u = ⟨⟩ , ⟨⟩
+-- ⇓ Γ (σ ẋ τ) (u , v) with ⇓ Γ σ u | ⇓ Γ τ v
+-- ... | (t , nt) | (s , ns) = (t , s) , (nt , ns)
+-- ⇓ Γ (σ ⇒ τ) u with ⇓ (σ ∷ Γ) τ (u (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))))
+-- ... | (t , nt) = (ƛ t) , (ƛ nt)
 
-⇑ Γ Ans (n , nn) = n , ((‘ nn) , refl)
-⇑ Γ 𝟙 n = `nil
-⇑ Γ (σ ẋ τ) (n , nn) = ⇑ Γ σ (π₁ n , π₁ nn) , ⇑ Γ τ (π₂ n , π₂ nn)
-⇑ Γ (σ ⇒ τ) (n , nn) Θ ρ a u = {!  !} -- ⇑ Θ τ {!   !} -- ((rename ρ n · pr₁ (⇓ Θ σ u)) , {!   !})
+-- ⇑ Γ Ans (n , nn) = n , ((‘ nn) , refl)
+-- ⇑ Γ 𝟙 n = `nil
+-- ⇑ Γ (σ ẋ τ) (n , nn) = ⇑ Γ σ (π₁ n , π₁ nn) , ⇑ Γ τ (π₂ n , π₂ nn)
+-- ⇑ Γ (σ ⇒ τ) (n , nn) Θ ρ a u = {!  !} -- ⇑ Θ τ {!   !} -- ((rename ρ n · pr₁ (⇓ Θ σ u)) , {!   !})
  
