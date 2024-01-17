@@ -20,6 +20,9 @@ mapRen : (∀{σ} → Δ ∋ σ → Θ ∋ σ) → Ren Γ Δ → Ren Γ Θ
 mapRen f [] = []
 mapRen f (r ∷ rs) = f r ∷ mapRen f rs
 
+concatRen : Ren Γ Δ → Ren Δ Θ → Ren Γ Θ
+concatRen ρ ρ' = mapRen (λ x → lookupRen x ρ') ρ
+
 lift : Ren Γ Δ → Ren (σ ∷ Γ) (σ ∷ Δ)
 lift rs = ze ∷ mapRen su rs
 
