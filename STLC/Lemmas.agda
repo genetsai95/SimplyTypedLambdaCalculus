@@ -271,3 +271,18 @@ srs-s-eq eqv (ƛ t) = cong ƛ_ (srs-s-eq (eq-lift eqv) t)
                                                            ≡⟨ ≡-sym (lookup-map weaken x refl) ⟩ 
                                                              lookup x (mapSub weaken us) 
                                                            ∎
+
+subst-rename-lift-subst' : ∀{Γ Δ Θ σ τ} → (ρ : Ren Δ Θ)(ts : Sub Γ Δ)(s : Θ ⊢ σ)(x : σ ∷ Γ ∋ τ) → subst (rename (lift ρ) (subst (` x) (ts ↑))) (s ∷ idSub) ≡ subst (` x) (s ∷ mapSub (rename ρ) ts)
+subst-rename-lift-subst' ρ ts s ze = refl
+subst-rename-lift-subst' ρ ts s (su x) = subst (rename (lift ρ) (lookup x (mapSub weaken ts))) (s ∷ idSub)
+                  ≡⟨ cong (λ t → subst (rename (lift ρ) t) (s ∷ idSub)) (lookup-map weaken x refl) ⟩ 
+                    subst (rename (lift ρ) (weaken (lookup x ts))) (s ∷ idSub)
+                  ≡⟨ cong (λ t → subst t (s ∷ idSub)) (rename-lift-weaken≡weaken-rename ρ (lookup x ts)) ⟩ 
+                    subst (weaken (rename ρ (lookup x ts))) (s ∷ idSub)
+                  ≡⟨ subst-weaken-idSub (rename ρ (lookup x ts)) {s} ⟩ 
+                    rename ρ (lookup x ts)
+                  ≡⟨ ≡-sym (lookup-map (rename ρ) x refl) ⟩ 
+                    lookup x (mapSub (rename ρ) ts) 
+                  ∎
+subst-rename-lift-subst : ∀{Γ Δ Θ σ τ} → (ρ : Ren Δ Θ)(ts : Sub Γ Δ)(t : σ ∷ Γ ⊢ τ)(s : Θ ⊢ σ) → (rename (lift ρ) (subst t (ts ↑)) [ s /x]) ≡ subst t (s ∷ mapSub (rename ρ) ts)
+subst-rename-lift-subst ρ ts t s = srs-s-eq {ts = ts ↑} {lift ρ} {s ∷ idSub} {s ∷ mapSub (rename ρ) ts} (subst-rename-lift-subst' ρ ts s) t
