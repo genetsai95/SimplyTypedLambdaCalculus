@@ -21,7 +21,7 @@ Comp (σ ⇒ τ) t = Σ ([] ⊢ σ ⇒ τ) (λ t' → (t →β* t') × ((a : [] 
 Comp (σ ẋ τ) t = Σ ([] ⊢ σ) (λ t' → Σ ([] ⊢ τ) (λ t'' → ((π₁ t →β* t') × (π₂ t →β* t'') × Comp σ t' × Comp τ t'')))
 
 
--- -- context -> corresponding computability structures for closed terms
+-- context -> corresponding computability structures for closed terms
 data ⟦_⟧ˢ : (Γ : Cxt) → ⟦ Γ ⟧ᶜ → Set where
     [] : ⟦ [] ⟧ˢ []
     _∷_ : ∀{σ} → {t : [] ⊢ σ}{ts : ⟦ Γ ⟧ᶜ} → Comp σ t → ⟦ Γ ⟧ˢ ts → ⟦ (σ ∷ Γ) ⟧ˢ (t ∷ ts)
@@ -32,7 +32,7 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 
 
 
--- -- computability morphism
+-- computability morphism
 ⟦_⟧ : (t : Γ ⊢ σ) → (ts : ⟦ Γ ⟧ᶜ)(cs : ⟦ Γ ⟧ˢ ts) → Σ ([] ⊢ σ) (λ t' → ((t [ ts ]) →β* t') × Comp σ t')
 ⟦ ` x ⟧ ts cs = ((` x) [ ts ]) , β-base , lookupˢ x cs
 ⟦ yes ⟧ ts cs = yes , β-base , yes , β-base , inl refl
