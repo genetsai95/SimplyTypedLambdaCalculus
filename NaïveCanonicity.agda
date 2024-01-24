@@ -46,14 +46,14 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 ... | t' , t[ts]→t' , _ , t'' , _ , π₂t'→t'' , _ , t''cs = t'' , concatβ* (map-π₂ t[ts]→t') π₂t'→t'' , t''cs
 ⟦ t · s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
 ... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , scs = (t'' · s') , map-app (concatβ* t[ts]→t' t'→t'') s[ts]→s' , f s' scs
-⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-step (β-refl refl) β-base , 
+⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , 
                           λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→t''' , eq) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
                                    in t''' , concatβ* (concatβ* (β-step β-ƛ (β-step (β-refl (lem[sub1] t ts t')) β-base)) t[t'∷ts]→t'') t''→t''' , eq
 ⟦ ƛ_ {τ = 𝟙} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , ((ƛ t) [ ts ]) , β-base , λ t' c → `nil
-⟦ ƛ_ {τ = τ ẋ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-step (β-refl refl) β-base , 
+⟦ ƛ_ {τ = τ ẋ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , 
                               λ t' c → let (t'' , t[t'∷ts]→t'' , s , s' , π₁t''→s , π₂t''→s' , scs , s'cs) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs)
                                        in s , s' , concatβ* (map-π₁ (concatβ* (β-step β-ƛ (β-step (β-refl (lem[sub1] t ts t')) β-base)) t[t'∷ts]→t'')) π₁t''→s , concatβ* (map-π₂ (concatβ* (β-step β-ƛ (β-step (β-refl (lem[sub1] t ts t')) β-base)) t[t'∷ts]→t'')) π₂t''→s' , scs , s'cs
-⟦ ƛ_ {τ = τ ⇒ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-step (β-refl refl) β-base , 
+⟦ ƛ_ {τ = τ ⇒ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , 
                               λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→t''' , f) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs)
                                        in t''' , concatβ* (concatβ* (β-step β-ƛ (β-step (β-refl (lem[sub1] t ts t')) β-base)) t[t'∷ts]→t'') t''→t''' , λ s c' → f s c' 
 
@@ -74,7 +74,8 @@ thm[canonicity] t with ⟦ t ⟧ [] []
 ... | t' , t[[]]→t' , .no , t'→no , inr refl = inr (β-red (β-step (β-refl (≡-sym ([[]] t))) (concatβ* t[[]]→t' t'→no)))
 
 test-term : [] ⊢ Ans
-test-term = (ƛ (` ze)) · (π₁ (π₂ (yes , ((ƛ (` ze)) · no)) , ⟨⟩))
+test-term = π₁ (yes , no)
+    -- (ƛ (` ze)) · (π₁ (π₂ (yes , ((ƛ (` ze)) · no)) , ⟨⟩))
 
 test-canonicity : ([] ⊢ test-term ≐ yes ∶ Ans) ⊎ ([] ⊢ test-term ≐ no ∶ Ans)
 test-canonicity = thm[canonicity] test-term
