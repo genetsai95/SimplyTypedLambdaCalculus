@@ -39,8 +39,8 @@ sr-sr-eq eqv (ƛ t) = cong ƛ_ (sr-sr-eq (eq-lift eqv) t)
                                                                  ≡⟨ ≡-sym (lookup-lookupRen-su-↑ x ρ' ss) ⟩ lookup (lookupRen x (mapRen su ρ')) (ss ↑) ∎
 
 sr-r-eq : {ρ : Ren Γ Δ}{ts : Sub Δ Θ}{ρ' : Ren Γ Θ}
-                → (∀{σ} → (x : Γ ∋ σ) → subst (rename ρ (` x)) ts ≡ (rename ρ' (` x)))
-                → {σ : Type}(t : Γ ⊢ σ) → subst (rename ρ t) ts ≡ rename ρ' t
+          → (∀{σ} → (x : Γ ∋ σ) → subst (rename ρ (` x)) ts ≡ (rename ρ' (` x)))
+          → {σ : Type}(t : Γ ⊢ σ) → subst (rename ρ t) ts ≡ rename ρ' t
 sr-r-eq eqv (` x) = eqv x
 sr-r-eq eqv yes = refl
 sr-r-eq eqv no = refl
@@ -62,6 +62,34 @@ sr-r-eq eqv (ƛ t) = cong ƛ_ (sr-r-eq (eq-lift eqv) t)
                                                        ≡⟨ refl ⟩ (` lookupRen (lookupRen x ρ') (mapRen su idRen))
                                                        ≡⟨ cong `_ (lookupRen-wk (lookupRen x ρ')) ⟩ (` su (lookupRen x ρ'))
                                                        ≡⟨ cong `_ (≡-sym (lookupRen-map su x refl)) ⟩ (` lookupRen x (mapRen su ρ')) ∎
+
+sr-s-eq : {ρ : Ren Γ Δ}{ts : Sub Δ Θ}{ss : Sub Γ Θ}
+          → (∀{σ} → (x : Γ ∋ σ) → subst (rename ρ (` x)) ts ≡ subst (` x) ss)
+          → {σ : Type}(t : Γ ⊢ σ) → subst (rename ρ t) ts ≡ subst t ss
+sr-s-eq eqv (` x) = eqv x
+sr-s-eq eqv yes = refl
+sr-s-eq eqv no = refl
+sr-s-eq eqv ⟨⟩ = refl
+sr-s-eq eqv (t , s) = pair-term-≡ (sr-s-eq eqv t) (sr-s-eq eqv s)
+sr-s-eq eqv (π₁ t) = cong π₁ (sr-s-eq eqv t)
+sr-s-eq eqv (π₂ t) = cong π₂ (sr-s-eq eqv t)
+sr-s-eq eqv (t · s) = app-term-≡ (sr-s-eq eqv t) (sr-s-eq eqv s)
+sr-s-eq eqv (ƛ t) = cong ƛ_ (sr-s-eq (eq-lift eqv) t)
+  where
+    eq-lift : {ρ : Ren Γ Δ}{ts : Sub Δ Θ}{ss : Sub Γ Θ}
+              → (∀{σ} → (x : Γ ∋ σ) → subst (rename ρ (` x)) ts ≡ subst (` x) ss)
+              → {σ τ : Type}(x : τ ∷ Γ ∋ σ) → subst (rename (lift ρ) (` x)) (ts ↑) ≡ subst (` x) (ss ↑)
+    eq-lift {ρ = ρ} {ts} {ss} eqv ze = refl
+    eq-lift {ρ = ρ} {ts} {ss} eqv (su x) = lookup (lookupRen x (mapRen su ρ)) (ts ↑)
+                                         ≡⟨ cong (λ y → lookup y (ts ↑)) (lookupRen-map su x refl) ⟩ 
+                                           lookup (lookupRen x ρ) (mapSub weaken ts) 
+                                         ≡⟨ lookup-map weaken (lookupRen x ρ) refl ⟩ 
+                                           weaken (lookup (lookupRen x ρ) ts)
+                                         ≡⟨ cong weaken (eqv x) ⟩ 
+                                           weaken (subst (` x) ss) 
+                                         ≡⟨ ≡-sym (lookup-map weaken x refl) ⟩ 
+                                           lookup x (mapSub weaken ss)
+                                         ∎
 
 rr-eq : ∀{Δ Δ'} → {rs : Ren Γ Δ}{rs' : Ren Γ Δ'}{ss : Ren Δ Θ}{ss' : Ren Δ' Θ}
         → (∀{σ} → (x : Γ ∋ σ) → rename ss (rename rs (` x)) ≡ rename ss' (rename rs' (` x)))
