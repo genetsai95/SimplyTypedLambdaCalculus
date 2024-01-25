@@ -45,6 +45,10 @@ map-app β-base (β-step x rs) = β-step (ξ-app (β-refl refl) x) (map-app β-b
 map-app (β-step x rs) β-base = β-step (ξ-app x (β-refl refl)) (map-app rs β-base)  
 map-app (β-step x rs1) (β-step y rs2) = β-step (ξ-app x y) (map-app rs1 rs2)
 
+map-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t →β* t' → (ƛ t) →β* (ƛ t')
+map-ƛ β-base = β-base
+map-ƛ (β-step x rs) = β-step (ξ-ƛ x) (map-ƛ rs)
+
 rename-ξ : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t →β t' → rename ρ t →β rename ρ t'
 rename-ξ ρ (β-refl refl) = β-refl refl
 rename-ξ ρ {(ƛ t) · s} {t'} β-ƛ = transport (λ y → ((ƛ rename (lift ρ) t) · rename ρ s) →β y) (subst-rename≡rename-subst ρ t {s}) (β-ƛ {t = rename (lift ρ) t} {rename ρ s})
