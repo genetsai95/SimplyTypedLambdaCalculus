@@ -70,6 +70,11 @@ weaken' : Γ ⊢ σ → τ ∷ Γ ⊢ σ
 weaken' = rename' su
 
 -- equalities about renamings
+∷-ren-eq : {x y : Δ ∋ σ}{xs ys : Ren Γ Δ} → x ≡ y → xs ≡ ys → _≡_ {X = Ren (σ ∷ Γ) Δ} (x ∷ xs) (y ∷ ys)
+∷-ren-eq refl refl = refl
+
+ren-head-eq-elim : {x : Δ ∋ σ}{xs ys : Ren Γ Δ} → _≡_ {X = Ren (σ ∷ Γ) Δ} (x ∷ xs) (x ∷ ys) → xs ≡ ys
+ren-head-eq-elim refl = refl
 
 lookupRen-map : (f : ∀{τ} → Δ ∋ τ → Θ ∋ τ){rs : Ren Γ Δ}(x : Γ ∋ σ){t : Δ ∋ σ} → lookupRen x rs ≡ t → lookupRen x (mapRen f rs) ≡ f t
 lookupRen-map f {_ ∷ _} ze refl = refl
@@ -115,3 +120,7 @@ wk≡su (su x) = lookupRen-map su x (wk≡su x)
 
 weaken≡weaken' : ∀{τ} → (t : Γ ⊢ σ) → weaken {τ = τ} t ≡ weaken' t
 weaken≡weaken' t = ≡-sym (rename'≡rename (λ x → ≡-sym (wk≡su x)) t)
+
+concatRen-lift : ∀{σ} → (ρ : Ren Γ Δ)(ρ' : Ren Δ Θ) → concatRen (lift {σ = σ} ρ) (lift ρ') ≡ lift (concatRen ρ ρ')
+concatRen-lift [] ρ' = refl 
+concatRen-lift (r ∷ ρ) ρ' = cong (ze ∷_) (∷-ren-eq (lookupRen-map su r refl) (ren-head-eq-elim (concatRen-lift ρ ρ'))) 
