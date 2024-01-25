@@ -21,9 +21,9 @@ data Normal where
 
 Comp : (σ : Type) → Γ ⊢ σ → Set
 Comp {Γ} Ans t = Σ (Γ ⊢ Ans) (λ t' → (t →β* t') × Normal Γ Ans t')
-Comp {Γ} 𝟙 t = ⊤
-Comp {Γ} (σ ẋ τ) t = Σ (Γ ⊢ σ) (λ t' → Σ (Γ ⊢ τ) (λ t'' → (π₁ t →β* t') × (π₂ t →β* t'') × Comp σ t' × Comp τ t''))
-Comp {Γ} (σ ⇒ τ) t = Σ (Γ ⊢ σ ⇒ τ) (λ t' → (t →β* t') × ((Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) → Comp τ ((rename ρ t') · a)))
+Comp {Γ} 𝟙 t = t →β* ⟨⟩ -- ⊤
+Comp {Γ} (σ ẋ τ) t = Σ (Γ ⊢ σ) (λ t' → Σ (Γ ⊢ τ) (λ t'' → (t →β* (t' , t'')) × Comp σ t' × Comp τ t''))
+Comp {Γ} (σ ⇒ τ) t = Σ (σ ∷ Γ ⊢ τ) (λ t' → (t →β* (ƛ t')) × ((Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) → Σ (Θ ⊢ τ) (λ a' → ((rename ρ (ƛ t') · a) →β* a') × Comp τ a')))
 
 ⟦_⟧ᶜ : Cxt → Cxt → Set
 ⟦ Γ ⟧ᶜ Δ = Sub Γ Δ
@@ -63,9 +63,14 @@ rename-ne ρ (n · x) = rename-ne ρ n · rename-nf ρ x
 
 rename-comp : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
 rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
-rename-comp {σ = 𝟙} ρ t _ = `nil
-rename-comp {σ = σ ẋ τ} ρ t (s , s' , π₁t→s , π₂t→s' , scs , s'cs) = rename ρ s , rename ρ s' , map-rename ρ π₁t→s , map-rename ρ π₂t→s' , rename-comp ρ s scs , rename-comp ρ s' s'cs
-rename-comp {σ = σ ⇒ τ} ρ t (t' , t→t' , f) = rename ρ t' , map-rename ρ t→t' , λ Θ ρ' s c → transport (λ y → Comp τ (y · s)) (rename-concatRen≡rename-rename ρ ρ' t') (f Θ (concatRen ρ ρ') s c)
+rename-comp {σ = 𝟙} ρ t t→⟨⟩ = map-rename ρ t→⟨⟩ -- `nil
+rename-comp {σ = σ ẋ τ} ρ t (s , s' , t→s,s' , scs , s'cs) = rename ρ s , rename ρ s' , concatβ* (map-rename ρ t→s,s') (map-pair β-base β-base) , rename-comp ρ s scs , rename-comp ρ s' s'cs
+rename-comp {σ = σ ⇒ τ} ρ t (t' , t→t' , f) = rename (lift ρ) t' , map-rename ρ t→t' , 
+                                              λ Θ ρ' s c → let (s' , ren-t'·s→s' , s'cs) = f Θ (concatRen ρ ρ') s c 
+                                                           in s' , β-step (β-refl (cong (λ y → (ƛ y) · s) (rename (lift ρ') (rename (lift ρ) t') 
+                                                                                                           ≡⟨ ≡-sym (rename-concatRen≡rename-rename (lift ρ) (lift ρ') t') ⟩ rename (concatRen (lift ρ) (lift ρ')) t' 
+                                                                                                           ≡⟨ cong (λ y → rename y t') (concatRen-lift ρ ρ') ⟩ rename (lift (concatRen ρ ρ')) t' ∎))) ren-t'·s→s' ,
+                                                              s'cs
 
 renameˢ : (ρ : Ren Δ Θ){ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (mapSub (rename ρ) ts)
 renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
@@ -74,45 +79,70 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⟦ ` x ⟧ Δ ts cs = lookup x ts , β-base , lookupˢ x cs
 ⟦ yes ⟧ Δ ts cs = yes , β-base , yes , β-base , yes
 ⟦ no ⟧ Δ ts cs = no , β-base , no , β-base , no
-⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , β-base , `nil
+⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , β-base , β-base
 ⟦ t , s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
-... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , β-step β-π₁ β-base , β-step β-π₂ β-base , t'cs , s'cs
-⟦ π₁ t ⟧ Δ ts cs = let (t' , t[ts]→t' , t'' , _ , π₁t'→t'' , _ , t''cs , _ ) = ⟦ t ⟧ Δ ts cs 
-                  in t'' , concatβ* (map-π₁ t[ts]→t') π₁t'→t'' , t''cs
-⟦ π₂ t ⟧ Δ ts cs = let (t' , t[ts]→t' , _ , t'' , _ , π₂t'→t'' , _ , t''cs) = ⟦ t ⟧ Δ ts cs 
-                  in t'' , concatβ* (map-π₂ t[ts]→t') π₂t'→t'' , t''cs
+... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , β-base , t'cs , s'cs
+⟦ π₁ t ⟧ Δ ts cs = let (t' , t[ts]→t' , t'' , _ , t'→t'',s , t''cs , _ ) = ⟦ t ⟧ Δ ts cs 
+                   in t'' , concatβ* (map-π₁ (concatβ* t[ts]→t' t'→t'',s)) (β-step β-π₁ β-base) , t''cs
+⟦ π₂ t ⟧ Δ ts cs = let (t' , t[ts]→t' , _ , t'' , t'→s,t'' , _ , t''cs) = ⟦ t ⟧ Δ ts cs 
+                   in t'' , concatβ* (map-π₂ (concatβ* t[ts]→t' t'→s,t'')) (β-step β-π₂ β-base) , t''cs
 ⟦ _·_ {τ = τ} t s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
-... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , s'cs = (t'' · s') , map-app (concatβ* t[ts]→t' t'→t'') s[ts]→s' , transport (λ y → Comp τ (y · s')) (rename-idRen t'') (f Δ idRen s' s'cs)
-⟦ ƛ_ {τ = Ans} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , 
-                             λ Θ ρ s scs → let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                           in t'' , β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) (concatβ* t[s∷mr-ts]→t' t'→t'')) , nt''
-⟦ ƛ_ {τ = 𝟙} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , λ Θ ρ s scs → `nil
-⟦ ƛ_ {τ = σ ẋ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , 
-                               λ Θ ρ s scs → let (t' , t[s∷mr-ts]→t' , t₁ , t₂ , π₁t'→t₁ , π₂t'→t₂ , t₁cs , t₂cs) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                             in t₁ , t₂ , concatβ* (map-π₁ (β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) β-base))) (concatβ* (map-π₁ t[s∷mr-ts]→t') π₁t'→t₁) 
-                                                        , concatβ* (map-π₂ (β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) β-base))) (concatβ* (map-π₂ t[s∷mr-ts]→t') π₂t'→t₂) 
-                                                        , t₁cs , t₂cs
-⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , β-base , (ƛ subst t (ts ↑)) , β-base , 
-                               λ Θ ρ s scs → let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , f) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                             in t'' , concatβ* (β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) β-base)) (concatβ* t[s∷mr-ts]→t' t'→t'') , 
-                                                λ Θ' ρ' s' c → f Θ' ρ' s' c
+... | t' , t[ts]→t' , t'' , t'→ƛt'' , f | s' , s[ts]→s' , s'cs = let (u , ƛ-ren-id-t''·s'→u , ucs) = f Δ idRen s' s'cs 
+                                                                 in u , concatβ* (map-app (concatβ* t[ts]→t' 
+                                                                                                    (concatβ* t'→ƛt'' 
+                                                                                                             (β-step (β-refl (cong ƛ_ (≡-sym (rename-idRen t'')))) β-base))) 
+                                                                                           s[ts]→s') 
+                                                                                  ƛ-ren-id-t''·s'→u ,
+                                                                    ucs
+⟦ ƛ_ {τ = Ans} t ⟧   Δ ts cs = ((ƛ t) [ ts ]) , β-base , (t [ (ts ↑) ]) , β-base , 
+                                λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
+                                            in t' , β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t') , 
+                                               t'' , t'→t'' , nt''
+⟦ ƛ_ {τ = 𝟙} t ⟧     Δ ts cs = ((ƛ t) [ ts ]) , β-base , (t [ (ts ↑) ]) , β-base , 
+                                λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t'→⟨⟩) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
+                                            in t' , β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t') , t'→⟨⟩
+⟦ ƛ_ {τ = σ ẋ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , β-base , (t [ (ts ↑) ]) , β-base ,
+                                λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
+                                            in t' , β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t') ,
+                                               t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs
+⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , β-base , (t [ (ts ↑) ]) , β-base , 
+                                λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t'' , t'→ƛt'' , f) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
+                                            in t' , β-step β-ƛ (β-step (β-refl (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t') , 
+                                               t'' , t'→ƛt'' , λ Θ' ρ' s' c' → f Θ' ρ' s' c'
 
 
-⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → Σ (Γ ⊢ σ) (Normal Γ σ)
-⇑ : (Γ : Cxt)(σ : Type) → Σ (Γ ⊢ σ) (Neutral Γ σ) → Σ (Γ ⊢ σ) (Comp σ)
+-- ⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → Σ (Γ ⊢ σ) (λ t' → (t →β* t') × Normal Γ σ t')
+-- ⇑ : (Γ : Cxt)(σ : Type) → ((t , _) : Σ (Γ ⊢ σ) (Neutral Γ σ)) → Comp σ t
 
-⇓ Γ Ans (n , _ , nf) = n , nf
-⇓ Γ 𝟙 {t} _ = ⟨⟩ , ⟨⟩
-⇓ Γ (σ ẋ τ) (t₁ , t₂ , π₁t→t₁ , π₂t→t₂ , t₁cs , t₂cs) with ⇓ Γ σ {t₁} t₁cs | ⇓ Γ τ {t₂} t₂cs
-... | t₁' , nt₁' | t₂' , nt₂' = (t₁' , t₂') , (nt₁' , nt₂')
-⇓ Γ (σ ⇒ τ) (n , t→n , f) = let (t , tcs) = ⇑ (σ ∷ Γ) σ ((` ze) , (` ze)) 
-                            in let (n , nf) = ⇓ (σ ∷ Γ) τ (f (σ ∷ Γ) wk t tcs) 
-                               in (ƛ n) , (ƛ nf)
+-- ⇓ Γ Ans cs = cs
+-- ⇓ Γ 𝟙 cs = ⟨⟩ , cs , ⟨⟩
+-- ⇓ Γ (σ ẋ τ) (t₁ , t₂ , t→t₁,t₂ , t₁cs , t₂cs) with ⇓ Γ σ {t₁} t₁cs | ⇓ Γ τ {t₂} t₂cs
+-- ... | t₁' , t₁→t₁' , nt₁' | t₂' , t₂→t₂' , nt₂' = (t₁' , t₂') , concatβ* t→t₁,t₂ (map-pair t₁→t₁' t₂→t₂') , (nt₁' , nt₂')
+-- ⇓ Γ (σ ⇒ τ) (t' , t→t' , f) = let (s , `ze→s , t'cs) = f (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))) 
+--                               in let (n , wk-t'→n , nf) = ⇓ (σ ∷ Γ) τ t'cs 
+--                                  in (ƛ n) , concatβ* t→t' (β-step (β-refl (≡-sym {! weaken  !})) {!   !}) , (ƛ nf)
 
-⇑ Γ Ans (n , ne) = n , n , β-base , (‘ ne)
-⇑ Γ 𝟙 _ = ⟨⟩ , `nil
-⇑ Γ (σ ẋ τ) (n , ne) with ⇑ Γ σ (π₁ n , π₁ ne) | ⇑ Γ τ (π₂ n , π₂ ne)
-... | n₁ , n₁cs | n₂ , n₂cs = (n₁ , n₂) , n₁ , n₂ , β-step β-π₁ β-base , β-step β-π₂ β-base , n₁cs , n₂cs
-⇑ Γ (σ ⇒ τ) (n , ne) = n , n , β-base , 
-                       λ Θ ρ s c → let (s' , nf) = ⇓ Θ σ {s} c 
-                                   in {! ⇑ Θ τ ? !} 
+-- ⇑ Γ σ (n , ne) = {!   !}
+
+
+----------
+-- ⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → Σ (Γ ⊢ σ) (Normal Γ σ)
+-- ⇑ : (Γ : Cxt)(σ : Type) → Σ (Γ ⊢ σ) (Neutral Γ σ) → Σ (Γ ⊢ σ) (Comp σ)
+
+
+-- ⇓ Γ Ans (n , _ , nf) = n , nf
+-- ⇓ Γ 𝟙 {t} _ = ⟨⟩ , ⟨⟩
+-- ⇓ Γ (σ ẋ τ) (t₁ , t₂ , π₁t→t₁ , π₂t→t₂ , t₁cs , t₂cs) with ⇓ Γ σ {t₁} t₁cs | ⇓ Γ τ {t₂} t₂cs
+-- ... | t₁' , nt₁' | t₂' , nt₂' = (t₁' , t₂') , (nt₁' , nt₂')
+-- ⇓ Γ (σ ⇒ τ) (n , t→n , f) = let (t , tcs) = ⇑ (σ ∷ Γ) σ ((` ze) , (` ze)) 
+--                             in let (_ , _ , t'cs) = f (σ ∷ Γ) wk t tcs 
+--                                in let (n , nf) = ⇓ (σ ∷ Γ) τ t'cs 
+--                                   in (ƛ n) , (ƛ nf)
+
+-- ⇑ Γ Ans (n , ne) = n , n , β-base , (‘ ne)
+-- ⇑ Γ 𝟙 _ = ⟨⟩ , `nil
+-- ⇑ Γ (σ ẋ τ) (n , ne) with ⇑ Γ σ (π₁ n , π₁ ne) | ⇑ Γ τ (π₂ n , π₂ ne)
+-- ... | n₁ , n₁cs | n₂ , n₂cs = (n₁ , n₂) , n₁ , n₂ , β-step β-π₁ β-base , β-step β-π₂ β-base , n₁cs , n₂cs
+-- ⇑ Γ (σ ⇒ τ) (n , ne) = n , n , β-base , 
+--                        λ Θ ρ s c → let (s' , nf) = ⇓ Θ σ {s} c 
+--                                    in {! pr₂ (⇑ Θ τ ?) !} 
