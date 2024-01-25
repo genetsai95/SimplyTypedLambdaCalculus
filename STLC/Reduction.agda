@@ -15,6 +15,7 @@ data _→β_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     ξ-pair : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t →β t' → s →β s' → (t , s) →β (t' , s')
     ξ-π₁ : {t t' : Γ ⊢ σ ẋ τ} → t →β t' → π₁ t →β π₁ t'
     ξ-π₂ : {t t' : Γ ⊢ σ ẋ τ} → t →β t' → π₂ t →β π₂ t'
+    ξ-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t →β t' → (ƛ t) →β (ƛ t')
 
 data _→β*_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     β-base : {t : Γ ⊢ σ} → t →β* t
@@ -53,6 +54,7 @@ rename-ξ ρ (ξ-app r s) = ξ-app (rename-ξ ρ r) (rename-ξ ρ s)
 rename-ξ ρ (ξ-pair r s) = ξ-pair (rename-ξ ρ r) (rename-ξ ρ s)
 rename-ξ ρ (ξ-π₁ r) = ξ-π₁ (rename-ξ ρ r)
 rename-ξ ρ (ξ-π₂ r) = ξ-π₂ (rename-ξ ρ r)
+rename-ξ ρ (ξ-ƛ r) = ξ-ƛ (rename-ξ (lift ρ) r)
 
 map-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → rename ρ t →β* rename ρ t'
 map-rename ρ β-base = β-base
