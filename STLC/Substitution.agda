@@ -66,6 +66,10 @@ mapSub-fusion f g {t ∷ ts} = mapSub f (mapSub g (t ∷ ts))
                            ≡⟨ refl ⟩ (f ∘ g) t ∷ mapSub (f ∘ g) ts
                            ≡⟨ refl ⟩ mapSub (f ∘ g) (t ∷ ts) ∎
 
+mapSub-eq : {f g : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → (t : Δ ⊢ σ) → f t ≡ g t) → (ts : Sub Γ Δ) → mapSub f ts ≡ mapSub g ts
+mapSub-eq eqf [] = refl
+mapSub-eq eqf (t ∷ ts) = ∷-sub-eq (eqf t) (mapSub-eq eqf ts)
+
 eqSub : (ts ss : Sub Γ Δ) → (∀{σ} → (n : Γ ∋ σ) → lookup n ts ≡ lookup n ss) → ts ≡ ss
 eqSub [] [] _ = refl
 eqSub (t ∷ ts) (s ∷ ss) eq with eq ze
@@ -103,3 +107,15 @@ subst-idSub {t = t · s} = app-term-≡ subst-idSub subst-idSub
 
 lookup-⊙ : ∀{σ} → {ts : Sub Γ Δ}{ss : Sub Δ Θ}(x : Γ ∋ σ) → lookup x (ts ⊙ ss) ≡ subst (lookup x ts) ss
 lookup-⊙ {ss = ss} x = lookup-map (λ t → subst t ss) x refl
+
+mapSub-id : (ts : Sub Γ Δ) → mapSub id ts ≡ ts
+mapSub-id [] = refl
+mapSub-id (t ∷ ts) = cong (t ∷_) (mapSub-id ts)
+
+_⊙idSub : (ts : Sub Γ Δ) → (ts ⊙ idSub) ≡ ts
+ts ⊙idSub = mapSub (λ t → subst t idSub) ts
+          ≡⟨ mapSub-eq (λ t → subst-idSub {t = t}) ts ⟩ 
+            mapSub id ts
+          ≡⟨ mapSub-id ts ⟩
+            ts
+          ∎
