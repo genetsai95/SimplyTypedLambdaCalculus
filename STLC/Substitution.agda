@@ -119,3 +119,19 @@ ts ⊙idSub = mapSub (λ t → subst t idSub) ts
           ≡⟨ mapSub-id ts ⟩
             ts
           ∎
+
+idSub⊙ : (ts : Sub Γ Δ) → (idSub ⊙ ts) ≡ ts
+idSub⊙ ts = eqSub (idSub ⊙ ts) ts eq-each
+  where
+    eq-each : ∀{Γ Δ σ} → {ts : Sub Γ Δ}(x : Γ ∋ σ) → lookup x (idSub ⊙ ts) ≡ lookup x ts
+    eq-each ze = refl 
+    eq-each {ts = ts} (su x) = lookup x (mapSub (λ t → subst t ts) (mapSub weaken idSub))
+                             ≡⟨ lookup-map (λ t → subst t ts) x refl ⟩ 
+                               subst (lookup x (mapSub weaken idSub)) ts
+                             ≡⟨ cong (λ y → subst y ts) (lookup-map weaken x refl) ⟩ 
+                               subst (weaken (lookup x idSub)) ts
+                             ≡⟨ cong (λ y → subst (weaken y) ts) (lookup-idSub {x = x}) ⟩ 
+                               lookup (lookupRen x wk) ts
+                             ≡⟨ cong (λ y → lookup y ts) (lookupRen-wk x) ⟩
+                               lookup (su x) ts
+                             ∎
