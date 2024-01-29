@@ -63,3 +63,32 @@ rename-ξ ρ (ξ-ƛ r) = ξ-ƛ (rename-ξ (lift ρ) r)
 map-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → rename ρ t →β* rename ρ t'
 map-rename ρ β-base = β-base
 map-rename ρ (β-step r rs) = β-step (rename-ξ ρ r) (map-rename ρ rs)
+
+subst-ξ : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β t' → subst t ts →β subst t' ts
+subst-ξ ts (β-refl refl) = β-refl refl
+subst-ξ ts {(ƛ t) · s} β-ƛ = transport (λ y → (subst ((ƛ t) · s) ts) →β y) eq β-ƛ
+    where
+        eq : (subst t (ts ↑) [ subst s ts /x]) ≡ subst (t [ s /x]) ts
+        eq = (subst t (ts ↑) [ subst s ts /x])
+           ≡⟨ lem[sub1] t ts (subst s ts) ⟩ 
+              subst t (subst s ts ∷ ts)
+           ≡⟨ cong (λ y → subst t (subst s ts ∷ y)) (≡-sym (idSub⊙ ts)) ⟩ 
+              subst t (subst s ts ∷ (idSub ⊙ ts))
+           ≡⟨ refl ⟩ 
+              subst t ((s ∷ idSub) ⊙ ts)
+           ≡⟨ ≡-sym (subsub t {s ∷ idSub} {ts}) ⟩ 
+              subst (subst t (s ∷ idSub)) ts
+           ≡⟨ refl ⟩ 
+              subst (t [ s /x]) ts
+           ∎
+subst-ξ ts β-π₁ = β-π₁
+subst-ξ ts β-π₂ = β-π₂
+subst-ξ ts (ξ-app r r') = ξ-app (subst-ξ ts r) (subst-ξ ts r')
+subst-ξ ts (ξ-pair r r') = ξ-pair (subst-ξ ts r) (subst-ξ ts r')
+subst-ξ ts (ξ-π₁ r) = ξ-π₁ (subst-ξ ts r)
+subst-ξ ts (ξ-π₂ r) = ξ-π₂ (subst-ξ ts r)
+subst-ξ ts (ξ-ƛ r) = ξ-ƛ (subst-ξ (ts ↑) r)
+
+map-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → subst t ts →β* subst t' ts
+map-subst ts β-base = β-base
+map-subst ts (β-step r rs) = β-step (subst-ξ ts r) (map-subst ts rs)
