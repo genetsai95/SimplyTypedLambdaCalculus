@@ -19,7 +19,7 @@ data _⟶_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     η-ƛ : {t : Γ ⊢ σ ⇒ τ} → t ⟶ (ƛ (weaken {τ = σ} t · (` ze)))
     η-pair : {t : Γ ⊢ σ ẋ τ} → t ⟶ (π₁ t , π₂ t)
 
-infix 33 _‣_
+infixr 33 _‣_
 data _⟶⋆_ : Γ ⊢ σ → Γ ⊢ σ → Set where
    ✦ : {t : Γ ⊢ σ} → t ⟶⋆ t
    _‣_ : {t u v : Γ ⊢ σ} → t ⟶ u → u ⟶⋆ v → t ⟶⋆ v

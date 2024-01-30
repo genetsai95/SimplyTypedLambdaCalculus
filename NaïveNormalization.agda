@@ -75,39 +75,39 @@ renameˢ : (ρ : Ren Δ Θ){ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ �
 renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 
 ⟦_⟧ : (t : Γ ⊢ σ) → (Δ : Cxt)(ts : ⟦ Γ ⟧ᶜ Δ)(cs : ⟦ Γ ⟧ˢ ts) → Σ (Δ ⊢ σ) (λ t' → ((t [ ts ]) ⟶⋆ t') × Comp σ t')
-⟦ ` x ⟧ Δ ts cs = lookup x ts , base , lookupˢ x cs
-⟦ yes ⟧ Δ ts cs = yes , base , yes , base , yes
-⟦ no ⟧ Δ ts cs = no , base , no , base , no
-⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , base , ⟨⟩ , base , ⟨⟩
+⟦ ` x ⟧ Δ ts cs = lookup x ts , ✦ , lookupˢ x cs
+⟦ yes ⟧ Δ ts cs = yes , ✦ , yes , ✦ , yes
+⟦ no ⟧ Δ ts cs = no , ✦ , no , ✦ , no
+⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , ✦ , ⟨⟩ , ✦ , ⟨⟩
 ⟦ t , s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
-... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , map-pair base base , t'cs , s'cs
+... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , map-pair ✦ ✦ , t'cs , s'cs
 ⟦ π₁ t ⟧ Δ ts cs = let (t' , t[ts]→t' , t'' , _ , t'→t'',s , t''cs , _ ) = ⟦ t ⟧ Δ ts cs 
-                  in t'' , map-π₁ (t[ts]→t' ▷ t'→t'',s) ▷ step β-π₁ base , t''cs
+                  in t'' , map-π₁ (t[ts]→t' ▷ t'→t'',s) ▷ (β-π₁ ‣ ✦) , t''cs
 ⟦ π₂ t ⟧ Δ ts cs = let (t' , t[ts]→t' , _ , t'' , t'→s,t'' , _ , t''cs) = ⟦ t ⟧ Δ ts cs 
-                  in t'' , map-π₂ (t[ts]→t' ▷ t'→s,t'') ▷ step β-π₂ base , t''cs
+                  in t'' , map-π₂ (t[ts]→t' ▷ t'→s,t'') ▷ (β-π₂ ‣ ✦) , t''cs
 ⟦ _·_ {τ = τ} t s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
 ... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , s'cs = let (s'' , s'→s'' , c) = f Δ idRen s' s'cs 
                                                                 in (t'' · s'') , 
                                                                    map-app (t[ts]→t' ▷ t'→t'') (s[ts]→s' ▷ s'→s'') ,
                                                                    transport (λ y → Comp τ (y · s'')) (rename-idRen t'') c
-⟦ ƛ_ {τ = Ans} t ⟧   Δ ts cs = ((ƛ t) [ ts ]) , base , (ƛ subst t (ts ↑)) , base , 
-                                λ Θ ρ s scs → s , base ,
+⟦ ƛ_ {τ = Ans} t ⟧   Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
+                                λ Θ ρ s scs → s , ✦ ,
                                               let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                              in t'' , step β-ƛ (step (same (subst-rename-lift-subst ρ ts t s)) (t[s∷mr-ts]→t' ▷ t'→t'')) , nt''
-⟦ ƛ_ {τ = 𝟙} t ⟧     Δ ts cs = ((ƛ t) [ ts ]) , base , (ƛ subst t (ts ↑)) , base , 
-                                λ Θ ρ s scs → s , base , 
+                                              in t'' , β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t'' , nt''
+⟦ ƛ_ {τ = 𝟙} t ⟧     Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
+                                λ Θ ρ s scs → s , ✦ , 
                                               let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs)
-                                              in t'' , step β-ƛ (step (same (subst-rename-lift-subst ρ ts t s)) (t[s∷mr-ts]→t' ▷ t'→t'')) , nt''
-⟦ ƛ_ {τ = σ ẋ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , base , (ƛ subst t (ts ↑)) , base , 
-                                λ Θ ρ s scs → s , base ,
+                                              in t'' , β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t'' , nt''
+⟦ ƛ_ {τ = σ ẋ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
+                                λ Θ ρ s scs → s , ✦ ,
                                               let (t' , t[s∷mr-ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs)
                                               in t₁ , t₂ ,
-                                                 step β-ƛ (step (same (subst-rename-lift-subst ρ ts t s)) (t[s∷mr-ts]→t' ▷ t'→t₁,t₂)) ,
+                                                 β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t₁,t₂ ,
                                                  t₁cs , t₂cs
-⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , base , (ƛ subst t (ts ↑)) , base , 
-                                λ Θ ρ s scs → s , base ,
+⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
+                                λ Θ ρ s scs → s , ✦ ,
                                               let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , f) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                              in t'' , step β-ƛ (step (same (subst-rename-lift-subst ρ ts t s)) base) ▷ t[s∷mr-ts]→t' ▷ t'→t'' ,
+                                              in t'' , (β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ ✦) ▷ t[s∷mr-ts]→t' ▷ t'→t'' ,
                                                  λ Θ' ρ' s' c → f Θ' ρ' s' c
 
 
@@ -120,12 +120,12 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ... | t₁' , t₁→t₁' , nt₁' | t₂' , t₂→t₂' , nt₂' = (t₁' , t₂') , t→t₁,t₂ ▷ map-pair t₁→t₁' t₂→t₂' , (nt₁' , nt₂')
 ⇓ Γ (σ ⇒ τ) (n , t→n , f) = let (z , `ze→z , c) = f (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))) 
                             in let (t' , wk-n·z→t' , nt') = ⇓ (σ ∷ Γ) τ c 
-                               in (ƛ t') , t→n ▷ step η-ƛ (map-ƛ (map-app base `ze→z ▷ wk-n·z→t')) , (ƛ nt')
+                               in (ƛ t') , t→n ▷ (η-ƛ ‣ (map-ƛ (map-app ✦ `ze→z ▷ wk-n·z→t'))) , (ƛ nt')
 
-⇑ Γ Ans (n , ne) = n , base , (‘ ne)
-⇑ Γ 𝟙 (n , ne) = n , base , (‘‘ ne)
-⇑ Γ (σ ẋ τ) (n , ne) = π₁ n , π₂ n , step η-pair base , ⇑ Γ σ (π₁ n , π₁ ne) , ⇑ Γ τ (π₂ n , π₂ ne)
-⇑ Γ (σ ⇒ τ) (n , ne) = n , base , λ Θ ρ s c → let (s' , s→s' , ns') = ⇓ Θ σ {s} c 
+⇑ Γ Ans (n , ne) = n , ✦ , (‘ ne)
+⇑ Γ 𝟙 (n , ne) = n , ✦ , (‘‘ ne)
+⇑ Γ (σ ẋ τ) (n , ne) = π₁ n , π₂ n , η-pair ‣ ✦ , ⇑ Γ σ (π₁ n , π₁ ne) , ⇑ Γ τ (π₂ n , π₂ ne)
+⇑ Γ (σ ⇒ τ) (n , ne) = n , ✦ , λ Θ ρ s c → let (s' , s→s' , ns') = ⇓ Θ σ {s} c 
                                               in s' , s→s' , ⇑ Θ τ ((rename ρ n · s') , (rename-ne ρ ne · ns'))
 
 data NeutralSub : Sub Γ Δ → Set where
