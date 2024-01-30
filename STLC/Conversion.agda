@@ -19,38 +19,39 @@ data _⟶_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     η-ƛ : {t : Γ ⊢ σ ⇒ τ} → t ⟶ (ƛ (weaken {τ = σ} t · (` ze)))
     η-pair : {t : Γ ⊢ σ ẋ τ} → t ⟶ (π₁ t , π₂ t)
 
+infix 33 _‣_
 data _⟶⋆_ : Γ ⊢ σ → Γ ⊢ σ → Set where
-    base : {t : Γ ⊢ σ} → t ⟶⋆ t
-    step : {t u v : Γ ⊢ σ} → t ⟶ u → u ⟶⋆ v → t ⟶⋆ v
+   ✦ : {t : Γ ⊢ σ} → t ⟶⋆ t
+   _‣_ : {t u v : Γ ⊢ σ} → t ⟶ u → u ⟶⋆ v → t ⟶⋆ v
 
-infixr 33 _▷_
+infixr 35 _▷_
 _▷_ : {t u v : Γ ⊢ σ} → t ⟶⋆ u → u ⟶⋆ v → t ⟶⋆ v
-base ▷ rs = rs
-(step x rs1) ▷ rs2 = step x (rs1 ▷ rs2)
+✦ ▷ rs = rs
+(r ‣ rs1) ▷ rs2 = r ‣ rs1 ▷ rs2
 
 map-π₁ : {t u : Γ ⊢ σ ẋ τ} → t ⟶⋆ u → π₁ t ⟶⋆ π₁ u
-map-π₁ base = base
-map-π₁ (step x rs) = step (ξ-π₁ x) (map-π₁ rs)
+map-π₁ ✦ = ✦
+map-π₁ (r ‣ rs) =  ξ-π₁ r ‣ map-π₁ rs
 
 map-π₂ : {t u : Γ ⊢ σ ẋ τ} → t ⟶⋆ u → π₂ t ⟶⋆ π₂ u
-map-π₂ base = base
-map-π₂ (step x rs) = step (ξ-π₂ x) (map-π₂ rs)
+map-π₂ ✦ = ✦
+map-π₂ (r ‣ rs) = ξ-π₂ r ‣ map-π₂ rs
 
 map-pair : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t ⟶⋆ t' → s ⟶⋆ s' → (t , s) ⟶⋆ (t' , s')
-map-pair base base = base
-map-pair base (step x rs) = step (ξ-pair (same refl) x) (map-pair base rs)
-map-pair (step x rs) base = step (ξ-pair x (same refl)) (map-pair rs base)
-map-pair (step x rs1) (step y rs2) = step (ξ-pair x y) (map-pair rs1 rs2)
+map-pair ✦ ✦ = ✦
+map-pair ✦ (r ‣ rs) = ξ-pair (same refl) r ‣ map-pair ✦ rs
+map-pair (r ‣ rs) ✦ = ξ-pair r (same refl) ‣ map-pair rs ✦
+map-pair (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-pair r₁ r₂ ‣ map-pair rs₁ rs₂
 
 map-app : {t t' : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → t ⟶⋆ t' → s ⟶⋆ s' → (t · s) ⟶⋆ (t' · s')
-map-app base base = base
-map-app base (step x rs) = step (ξ-app (same refl) x) (map-app base rs)
-map-app (step x rs) base = step (ξ-app x (same refl)) (map-app rs base)  
-map-app (step x rs1) (step y rs2) = step (ξ-app x y) (map-app rs1 rs2)
+map-app ✦ ✦ = ✦
+map-app ✦ (r ‣ rs) = ξ-app (same refl) r ‣ map-app ✦ rs
+map-app (r ‣ rs) ✦ = ξ-app r (same refl) ‣ map-app rs ✦ 
+map-app (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-app r₁ r₂ ‣ map-app rs₁ rs₂
 
 map-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t ⟶⋆ t' → (ƛ t) ⟶⋆ (ƛ t')
-map-ƛ base = base
-map-ƛ (step x rs) = step (ξ-ƛ x) (map-ƛ rs)
+map-ƛ ✦ = ✦
+map-ƛ (r ‣ rs) = ξ-ƛ r ‣ map-ƛ rs
 
 rename-ξ : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → rename ρ t ⟶ rename ρ t'
 rename-ξ ρ (same refl) = same refl
@@ -66,8 +67,8 @@ rename-ξ ρ {t} η-ƛ = transport (λ y → rename ρ t ⟶ (ƛ y · (` ze))) (
 rename-ξ ρ η-pair = η-pair
 
 map-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → rename ρ t ⟶⋆ rename ρ t'
-map-rename ρ base = base
-map-rename ρ (step r rs) = step (rename-ξ ρ r) (map-rename ρ rs)
+map-rename ρ ✦ = ✦
+map-rename ρ (r ‣ rs) = rename-ξ ρ r ‣ map-rename ρ rs
 
 subst-ξ : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → subst t ts ⟶ subst t' ts
 subst-ξ ts (same refl) = same refl
@@ -97,5 +98,5 @@ subst-ξ ts {t} η-ƛ = transport (λ y → subst t ts ⟶ (ƛ y · (` ze))) (�
 subst-ξ ts η-pair = η-pair
 
 map-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → subst t ts ⟶⋆ subst t' ts
-map-subst ts base = base
-map-subst ts (step r rs) = step (subst-ξ ts r) (map-subst ts rs)
+map-subst ts ✦ = ✦
+map-subst ts (r ‣ rs) = subst-ξ ts r ‣ map-subst ts rs
