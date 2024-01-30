@@ -23,7 +23,7 @@ data _⟶⋆_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     base : {t : Γ ⊢ σ} → t ⟶⋆ t
     step : {t u v : Γ ⊢ σ} → t ⟶ u → u ⟶⋆ v → t ⟶⋆ v
 
-infixr 22 _▷_
+infixr 33 _▷_
 _▷_ : {t u v : Γ ⊢ σ} → t ⟶⋆ u → u ⟶⋆ v → t ⟶⋆ v
 base ▷ rs = rs
 (step x rs1) ▷ rs2 = step x (rs1 ▷ rs2)
