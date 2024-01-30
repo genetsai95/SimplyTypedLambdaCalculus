@@ -121,10 +121,6 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⇓ Γ (σ ⇒ τ) (n , t→n , f) = let (z , `ze→z , c) = f (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))) 
                             in let (t' , wk-n·z→t' , nt') = ⇓ (σ ∷ Γ) τ c 
                                in (ƛ t') , t→n ▷ step η-ƛ (map-ƛ (map-app base `ze→z ▷ wk-n·z→t')) , (ƛ nt')
-                            
-                            -- let (t , tcs) = ⇑ (σ ∷ Γ) σ ((` ze) , (` ze)) 
-                            -- in let (n , nf) = ⇓ (σ ∷ Γ) τ (f (σ ∷ Γ) wk t tcs) 
-                            --    in (ƛ n) , (ƛ nf)
 
 ⇑ Γ Ans (n , ne) = n , base , (‘ ne)
 ⇑ Γ 𝟙 (n , ne) = n , base , (‘‘ ne)
@@ -162,5 +158,5 @@ normalForm {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t
 test : [] ⊢ Ans
 test = π₁ (((ƛ (` ze)) · yes) , no)
 
-testN = normalForm test
-   
+test' : (𝟙 ẋ Ans) ∷ [] ⊢ Ans
+test' = π₂ (π₁ (π₂ (⟨⟩ , (` ze)) , no))
