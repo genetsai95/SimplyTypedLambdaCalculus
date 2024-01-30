@@ -2,6 +2,7 @@ module NaïveCanonicity' where
 
 open import Prelude
 open import STLC
+open import STLC.Reduction
 
 -- context -> list of closed terms with corresponding types
 ⟦_⟧ᶜ : Cxt → Set

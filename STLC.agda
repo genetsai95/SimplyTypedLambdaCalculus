@@ -15,9 +15,6 @@ open import STLC.Substitution public
 
 -- other lemmas about substituions and renamings
 open import STLC.Lemmas public
-                                    
--- reduction
-open import STLC.Reduction public
 
 -- judgemental equality
 open import STLC.JudgementalEquality public

@@ -2,6 +2,7 @@ module NaïveConsistency where
 
 open import Prelude
 open import STLC
+open import STLC.Reduction
 
 -- interpretation of types
 ⟦_⟧ᵗ : Type → Set
@@ -152,6 +153,7 @@ lem[sub1-itp] t s {ts} = ⟦ subst t (s ∷ idSub) ⟧ ts
 ⟦β→⟧ (ξ-pair t→t' s→s') u = pair-≡ (⟦β→⟧ t→t' u) (⟦β→⟧ s→s' u)
 ⟦β→⟧ (ξ-π₁ t→t') u = cong pr₁ (⟦β→⟧ t→t' u)
 ⟦β→⟧ (ξ-π₂ t→t') u = cong pr₂ (⟦β→⟧ t→t' u)
+⟦β→⟧ (ξ-ƛ t→t') u = fx λ x → ⟦β→⟧ t→t' (x ∷ u)
 
 ⟦β→*⟧ : {a b : Γ ⊢ σ} → a →β* b → ⟦ a ⟧ =f= ⟦ b ⟧
 ⟦β→*⟧ β-base u = refl
