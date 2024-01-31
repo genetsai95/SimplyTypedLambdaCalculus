@@ -2,6 +2,7 @@ module NaïveNormalization' where
 
 open import STLC
 open import STLC.Conversion
+open import STLC.Normal
 
 Comp : (σ : Type) → Γ ⊢ σ → Set
 Comp {Γ} Ans t = Σ (Γ ⊢ Ans) (λ t' → (t ⟶⋆ t') × Normal Γ Ans t')

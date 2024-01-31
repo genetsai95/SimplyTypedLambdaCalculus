@@ -17,6 +17,3 @@ open import STLC.Lemmas public
 
 -- judgemental equality
 open import STLC.JudgementalEquality public
-
--- normal and neutral forms
-open import STLC.Normal public
