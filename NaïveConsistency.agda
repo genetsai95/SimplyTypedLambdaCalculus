@@ -162,6 +162,8 @@ lem[sub1-itp] t s {ts} = ⟦ subst t (s ∷ idSub) ⟧ ts
 thm[consistency] : {a b : Γ ⊢ σ} → Γ ⊢ a ≐ b ∶ σ → ⟦ a ⟧ =f= ⟦ b ⟧
 thm[consistency] reflⱼ u = refl
 thm[consistency] (β-red rs) = ⟦β→*⟧ rs
+thm[consistency] (symⱼ eq) = fsym (thm[consistency] eq)
+thm[consistency] (transⱼ eq eq') = ftrans (thm[consistency] eq) (thm[consistency] eq')
 
 `t≢`f : `t ≡ `f → ⊥
 `t≢`f ()
