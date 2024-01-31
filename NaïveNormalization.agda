@@ -126,7 +126,7 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⇑ Γ 𝟙 (n , ne) = n , ✦ , (‘‘ ne)
 ⇑ Γ (σ ẋ τ) (n , ne) = π₁ n , π₂ n , η-pair ‣ ✦ , ⇑ Γ σ (π₁ n , π₁ ne) , ⇑ Γ τ (π₂ n , π₂ ne)
 ⇑ Γ (σ ⇒ τ) (n , ne) = n , ✦ , λ Θ ρ s c → let (s' , s→s' , ns') = ⇓ Θ σ {s} c 
-                                              in s' , s→s' , ⇑ Θ τ ((rename ρ n · s') , (rename-ne ρ ne · ns'))
+                                           in s' , s→s' , ⇑ Θ τ ((rename ρ n · s') , (rename-ne ρ ne · ns'))
 
 data NeutralSub : Sub Γ Δ → Set where
     [] : NeutralSub ([] {Γ})
