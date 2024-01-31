@@ -6,7 +6,6 @@ open import Prelude public
 open import STLC.Base public
 open import STLC.TermEquationalReasonings public
 
-
 -- renaming
 open import STLC.Renaming public
 
@@ -18,3 +17,6 @@ open import STLC.Lemmas public
 
 -- judgemental equality
 open import STLC.JudgementalEquality public
+
+-- normal and neutral forms
+open import STLC.Normal public

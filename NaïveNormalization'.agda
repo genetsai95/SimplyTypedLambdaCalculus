@@ -3,24 +3,6 @@ module NaïveNormalization' where
 open import STLC
 open import STLC.Conversion
 
-data Neutral : (Γ : Cxt)(σ : Type) → Γ ⊢ σ → Set
-data Normal : (Γ : Cxt)(σ : Type) → Γ ⊢ σ → Set
-
-data Neutral where
-    `_ : (x : Γ ∋ σ) → Neutral Γ σ (` x)
-    π₁ : {p : Γ ⊢ σ ẋ τ} → Neutral Γ (σ ẋ τ) p → Neutral Γ σ (π₁ p)
-    π₂ : {p : Γ ⊢ σ ẋ τ} → Neutral Γ (σ ẋ τ) p → Neutral Γ τ (π₂ p)
-    _·_ : {f : Γ ⊢ σ ⇒ τ}{a : Γ ⊢ σ} → Neutral Γ (σ ⇒ τ) f → Normal Γ σ a → Neutral Γ τ (f · a)
-
-data Normal where
-    yes : ∀{Γ} → Normal Γ Ans yes
-    no : ∀{Γ} → Normal Γ Ans no
-    ‘_ : {a : Γ ⊢ Ans} → Neutral Γ Ans a → Normal Γ Ans a
-    ⟨⟩ : ∀{Γ} → Normal Γ 𝟙 ⟨⟩
-    ‘‘_ : {a : Γ ⊢ 𝟙} → Neutral Γ 𝟙 a → Normal Γ 𝟙 a
-    _,_ : {a : Γ ⊢ σ}{b : Γ ⊢ τ} → Normal Γ σ a → Normal Γ τ b → Normal Γ (σ ẋ τ) (a , b)
-    ƛ_ : {t : σ ∷ Γ ⊢ τ} → Normal (σ ∷ Γ) τ t → Normal Γ (σ ⇒ τ) (ƛ t)
-
 Comp : (σ : Type) → Γ ⊢ σ → Set
 Comp {Γ} Ans t = Σ (Γ ⊢ Ans) (λ t' → (t ⟶⋆ t') × Normal Γ Ans t')
 Comp {Γ} 𝟙 t = Σ (Γ ⊢ 𝟙) (λ t' → (t ⟶⋆ t') × Normal Γ 𝟙 t')
@@ -48,23 +30,6 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 mapˢ : (fₜ : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ)(fₛ : ∀{σ} → {t : Δ ⊢ σ} → Comp σ t → Comp σ (fₜ t)) → {ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (mapSub fₜ ts)
 mapˢ fₜ fₛ [] = []
 mapˢ fₜ fₛ (c ∷ cs) = fₛ c ∷ mapˢ fₜ fₛ cs
-
-
-rename-nf : (ρ : Ren Γ Δ){t : Γ ⊢ σ} → Normal Γ σ t → Normal Δ σ (rename ρ t)
-rename-ne : (ρ : Ren Γ Δ){t : Γ ⊢ σ} → Neutral Γ σ t → Neutral Δ σ (rename ρ t)
-
-rename-nf ρ yes = yes
-rename-nf ρ no = no
-rename-nf ρ (‘ x) = ‘ rename-ne ρ x
-rename-nf ρ ⟨⟩ = ⟨⟩
-rename-nf ρ (‘‘ x) = ‘‘ rename-ne ρ x
-rename-nf ρ (n₁ , n₂) = rename-nf ρ n₁ , rename-nf ρ n₂
-rename-nf ρ (ƛ n) = ƛ rename-nf (lift ρ) n
-
-rename-ne ρ (` x) = ` lookupRen x ρ
-rename-ne ρ (π₁ n) = π₁ (rename-ne ρ n)
-rename-ne ρ (π₂ n) = π₂ (rename-ne ρ n)
-rename-ne ρ (n · x) = rename-ne ρ n · rename-nf ρ x
 
 rename-comp : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
 rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
@@ -141,30 +106,16 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
                                                                   ≡⟨ cong (λ y → y · s) (subst-weaken-idSub (rename ρ t) {s}) ⟩ 
                                                                       rename ρ t · s
                                                                   ∎)
-                                                
-data NeutralSub : Sub Γ Δ → Set where
-    [] : NeutralSub ([] {Γ})
-    _∷_ : {t : Δ ⊢ σ}{ts : Sub Γ Δ} → Neutral Δ σ t → NeutralSub ts → NeutralSub (t ∷ ts)
 
 ⇑ˢ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ˢ ts
 ⇑ˢ [] Δ [] [] = []
 ⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
 
-each-is-neutral : (ts : Sub Γ Δ) → (∀{σ} → (x : Γ ∋ σ) → Neutral Δ σ (lookup x ts)) → NeutralSub ts
-each-is-neutral [] ne-each = []
-each-is-neutral (t ∷ ts) ne-each = ne-each ze ∷ each-is-neutral ts (λ x → ne-each (su x))
-
-idSub-is-neutral : ∀{Γ} → NeutralSub (idSub {Γ})
-idSub-is-neutral {Γ} = each-is-neutral idSub each
-    where
-        each : ∀{σ} → (x : Γ ∋ σ) → Neutral Γ σ (lookup x idSub)
-        each {σ} x = transport (Neutral Γ σ) (≡-sym lookup-idSub) (` x)
-
 eval : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Comp σ t')
 eval {Γ} t = let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
              in t' , transport (λ y → y ⟶⋆ t') (subst-idSub {t = t}) t[id]→t' , t'cs
 
-normalForm : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
-normalForm {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
+normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
+normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
                        in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
                           in t'' , t→t' ▷ t'→t'' , nt''
