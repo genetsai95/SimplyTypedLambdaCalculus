@@ -142,7 +142,7 @@ lem[sub1-itp] t s {ts} = ⟦ subst t (s ∷ idSub) ⟧ ts
                        ∎
 
 ⟦β→⟧ : {a b : Γ ⊢ σ} → a →β b → ⟦ a ⟧ =f= ⟦ b ⟧
-⟦β→⟧ (β-refl refl) u = refl
+⟦β→⟧ (same refl) u = refl
 ⟦β→⟧ (β-ƛ {t = t} {s = s}) u = ≡-sym (  ⟦ subst t (s ∷ idSub) ⟧ u
                                     ≡⟨ lem[sub1-itp] t s ⟩
                                        ⟦ t ⟧ (⟦ s ⟧ u ∷ u) 
@@ -156,8 +156,8 @@ lem[sub1-itp] t s {ts} = ⟦ subst t (s ∷ idSub) ⟧ ts
 ⟦β→⟧ (ξ-ƛ t→t') u = fx λ x → ⟦β→⟧ t→t' (x ∷ u)
 
 ⟦β→*⟧ : {a b : Γ ⊢ σ} → a →β* b → ⟦ a ⟧ =f= ⟦ b ⟧
-⟦β→*⟧ β-base u = refl
-⟦β→*⟧ (β-step r rs) u = ftrans (⟦β→⟧ r) (⟦β→*⟧ rs) u
+⟦β→*⟧ ✦ u = refl
+⟦β→*⟧ (r ‣ rs) u = ftrans (⟦β→⟧ r) (⟦β→*⟧ rs) u
 
 thm[consistency] : {a b : Γ ⊢ σ} → Γ ⊢ a ≐ b ∶ σ → ⟦ a ⟧ =f= ⟦ b ⟧
 thm[consistency] reflⱼ u = refl

@@ -41,10 +41,10 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 -- -- output without reduction
 -- ⟦_⟧ : (t : Γ ⊢ σ) → (ts : ⟦ Γ ⟧ᶜ)(cs : ⟦ Γ ⟧ˢ ts) → Comp σ (t [ ts ])
 -- ⟦ ` x ⟧ ts cs = lookupˢ x cs
--- ⟦ yes ⟧ ts cs = inl β-base
--- ⟦ no ⟧ ts cs = inr β-base
+-- ⟦ yes ⟧ ts cs = inl ✦
+-- ⟦ no ⟧ ts cs = inr ✦
 -- ⟦ ⟨⟩ ⟧ ts cs = `nil
--- ⟦ t , s ⟧ ts cs = (t [ ts ]) , (s [ ts ]) , map-pair β-base β-base , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
+-- ⟦ t , s ⟧ ts cs = (t [ ts ]) , (s [ ts ]) , map-pair ✦ ✦ , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
 -- ⟦ π₁ t ⟧ ts cs = let (t₁ , t₂ , t→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs
 --                  in {!   !}
 -- ⟦ π₂ t ⟧ ts cs = let (t₁ , t₂ , t→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs 
@@ -54,28 +54,28 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 -- ⟦ ƛ t ⟧ ts cs = {!   !}
 
 ⟦_⟧ : (t : Γ ⊢ σ) → (ts : ⟦ Γ ⟧ᶜ)(cs : ⟦ Γ ⟧ˢ ts) → Σ ([] ⊢ σ) (λ t' → ((t [ ts ]) →β* t') × Comp σ t')
-⟦ yes ⟧ ts cs = yes , β-base , inl β-base
-⟦ ` x ⟧ ts cs = ((` x) [ ts ]) , β-base , lookupˢ x cs
-⟦ no ⟧ ts cs = no , β-base , inr β-base
-⟦ ⟨⟩ ⟧ ts cs = ⟨⟩ , β-base , `nil
-⟦ t , s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs --(t [ ts ]) , (s [ ts ]) , map-pair β-base β-base , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = ((t [ ts ]) , (s [ ts ])) , map-pair β-base β-base , t' , s' , map-pair t[ts]→t' s[ts]→s' , t'cs , s'cs
+⟦ yes ⟧ ts cs = yes , ✦ , inl ✦
+⟦ ` x ⟧ ts cs = ((` x) [ ts ]) , ✦ , lookupˢ x cs
+⟦ no ⟧ ts cs = no , ✦ , inr ✦
+⟦ ⟨⟩ ⟧ ts cs = ⟨⟩ , ✦ , `nil
+⟦ t , s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs --(t [ ts ]) , (s [ ts ]) , map-pair ✦ ✦ , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
+... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = ((t [ ts ]) , (s [ ts ])) , map-pair ✦ ✦ , t' , s' , map-pair t[ts]→t' s[ts]→s' , t'cs , s'cs
 ⟦ π₁ t ⟧ ts cs = let (t' , t[ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs
-                 in t₁ , concatβ* (map-π₁ (concatβ* t[ts]→t' t'→t₁,t₂)) (β-step β-π₁ β-base) , t₁cs
+                 in t₁ , map-π₁ (t[ts]→t' ▷ t'→t₁,t₂) ▷ (β-π₁ ‣ ✦) , t₁cs
 ⟦ π₂ t ⟧ ts cs = let (t' , t[ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs
-                 in t₂ , concatβ* (map-π₂ (concatβ* t[ts]→t' t'→t₁,t₂)) (β-step β-π₂ β-base) , t₂cs
+                 in t₂ , map-π₂ (t[ts]→t' ▷ t'→t₁,t₂) ▷ (β-π₂ ‣ ✦) , t₂cs
 ⟦ t · s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , t'' , t'→ƛt'' , f | s' , s[ts]→s' , s'cs = (t'' [ s' /x]) , concatβ* (map-app (concatβ* t[ts]→t' t'→ƛt'') s[ts]→s') (β-step β-ƛ β-base) , f s' s'cs
-⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , subst t (ts ↑) , β-base , 
+... | t' , t[ts]→t' , t'' , t'→ƛt'' , f | s' , s[ts]→s' , s'cs = (t'' [ s' /x]) , map-app (t[ts]→t' ▷ t'→ƛt'') s[ts]→s' ▷ (β-ƛ ‣ ✦) , f s' s'cs
+⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , subst t (ts ↑) , ✦ , 
                             λ t' c → let (t'' , t[t'∷ts]→t'' , t''cs) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
                                      in {! t''cs  !}
-⟦ ƛ_ {τ = 𝟙} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , subst t (ts ↑) , β-base , λ t' c → `nil
-⟦ ƛ_ {τ = σ ẋ τ} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , subst t (ts ↑) , β-base , 
+⟦ ƛ_ {τ = 𝟙} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , subst t (ts ↑) , ✦ , λ t' c → `nil
+⟦ ƛ_ {τ = σ ẋ τ} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , subst t (ts ↑) , ✦ , 
                               λ t' c → let (t'' , t[t'∷ts]→t'' , t₁ , t₂ , t''→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
-                                       in t₁ , t₂ , concatβ* (β-step (β-refl (lem[sub1] t ts t')) t[t'∷ts]→t'') t''→t₁,t₂ , t₁cs , t₂cs
-⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ ts cs = ((ƛ t) [ ts ]) , β-base , subst t (ts ↑) , β-base , 
+                                       in t₁ , t₂ , (same (lem[sub1] t ts t') ‣ t[t'∷ts]→t'') ▷ t''→t₁,t₂ , t₁cs , t₂cs
+⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , subst t (ts ↑) , ✦ , 
                               λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→ƛt''' , f) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
-                                       in t''' , β-step (β-refl (lem[sub1] t ts t')) (concatβ* t[t'∷ts]→t'' t''→ƛt''') , λ s c → f s c
+                                       in t''' , same (lem[sub1] t ts t') ‣ (t[t'∷ts]→t'' ▷ t''→ƛt''') , λ s c → f s c
 
 -- canonicity   
 [[]] : (t : [] ⊢ σ) → (t [ [] ]) ≡ t
@@ -90,8 +90,8 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 
 thm[canonicity] : (t : [] ⊢ Ans) → ([] ⊢ t ≐ yes ∶ Ans) ⊎ ([] ⊢ t ≐ no ∶ Ans)
 thm[canonicity] t with ⟦ t ⟧ [] [] 
-... | t' , t[[]]→t' , inl t'→yes = inl (β-red (β-step (β-refl (≡-sym ([[]] t))) (concatβ* t[[]]→t' t'→yes)))
-... | t' , t[[]]→t' , inr t'→no = inr (β-red (β-step (β-refl (≡-sym ([[]] t))) (concatβ* t[[]]→t' t'→no)))
+... | t' , t[[]]→t' , inl t'→yes = inl (β-red (same (≡-sym ([[]] t)) ‣ (t[[]]→t' ▷ t'→yes)))
+... | t' , t[[]]→t' , inr t'→no = inr (β-red (same (≡-sym ([[]] t)) ‣ (t[[]]→t' ▷ t'→no)))
 
 test-term : [] ⊢ Ans
 test-term = (ƛ (` ze)) · (π₁ (π₂ (yes , ((ƛ (` ze)) · no)) , ⟨⟩))
