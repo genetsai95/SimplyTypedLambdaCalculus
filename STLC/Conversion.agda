@@ -100,3 +100,36 @@ subst-ξ ts η-pair = η-pair
 map-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → subst t ts ⟶⋆ subst t' ts
 map-subst ts ✦ = ✦
 map-subst ts (r ‣ rs) = subst-ξ ts r ‣ map-subst ts rs
+
+data _⭆*_ : Sub Γ Δ → Sub Γ Δ → Set where
+   [] : {ts ts' : Sub [] Δ} → ts ⭆* ts'
+   _∷_ : {t t' : Δ ⊢ σ}{ts ts' : Sub Γ Δ} → t ⟶⋆ t' → ts ⭆* ts' → (t ∷ ts) ⭆* (t' ∷ ts')
+
+lookup⭆* : {ts ts' : Sub Γ Δ} → ∀{σ} → (x : Γ ∋ σ) → ts ⭆* ts' → lookup x ts ⟶⋆ lookup x ts'
+lookup⭆* ze (r ∷ _) = r
+lookup⭆* (su x) (_ ∷ rs) = lookup⭆* x rs
+
+mapSub⭆* : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t ⟶⋆ t' → f t ⟶⋆ f t') → {ts ts' : Sub Γ Δ} → ts ⭆* ts' → mapSub f ts ⭆* mapSub f ts'
+mapSub⭆* psv [] = []
+mapSub⭆* psv (r ∷ rs) = psv r ∷ mapSub⭆* psv rs
+
+_⟰* : ∀{σ} → {ts ts' : Sub Γ Δ} → ts ⭆* ts' → (_↑ {σ = σ} ts) ⭆* (ts' ↑)
+rs ⟰* = ✦ ∷ mapSub⭆* (map-rename wk) rs
+
+map-subst-Sub : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⭆* ts' → subst t ts ⟶⋆ subst t ts'
+map-subst-Sub (` x) rs = lookup⭆* x rs 
+map-subst-Sub yes rs = ✦
+map-subst-Sub no rs = ✦
+map-subst-Sub ⟨⟩ rs = ✦
+map-subst-Sub (t , s) rs = map-pair (map-subst-Sub t rs) (map-subst-Sub s rs)
+map-subst-Sub (π₁ t) rs = map-π₁ (map-subst-Sub t rs)
+map-subst-Sub (π₂ t) rs = map-π₂ (map-subst-Sub t rs)
+map-subst-Sub (t · s) rs = map-app (map-subst-Sub t rs) (map-subst-Sub s rs)
+map-subst-Sub (ƛ t) rs = map-ƛ (map-subst-Sub t (rs ⟰*))
+
+idSub⭆*idSub : ∀{Γ} → idSub {Γ} ⭆* idSub
+idSub⭆*idSub {[]} = []
+idSub⭆*idSub {σ ∷ Γ} = idSub⭆*idSub ⟰*
+
+map-/x : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s ⟶⋆ s' → (t [ s /x]) ⟶⋆ (t [ s' /x])
+map-/x t rs = map-subst-Sub t (rs ∷ idSub⭆*idSub)
