@@ -6,6 +6,8 @@ open import STLC.Renaming
 open import STLC.Substitution
 open import STLC.Lemmas
 
+
+-- definition of β-reduction
 data _→β_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     same : {t t' : Γ ⊢ σ} → t ≡ t' → t →β t'
     β-ƛ : {t : σ ∷ Γ ⊢ τ}{s : Γ ⊢ σ} → (ƛ t) · s →β t [ s /x]
@@ -26,6 +28,9 @@ infixr 35 _▷_
 _▷_ : {t u v : Γ ⊢ σ} → t →β* u → u →β* v → t →β* v
 ✦ ▷ rs = rs
 (r ‣ rs₁) ▷ rs₂ = r ‣ rs₁ ▷ rs₂
+
+
+-- ξ-rules for →β*
 
 map-π₁ : {t u : Γ ⊢ σ ẋ τ} → t →β* u → π₁ t →β* π₁ u
 map-π₁ ✦ = ✦
@@ -94,3 +99,44 @@ subst-ξ ts (ξ-ƛ r) = ξ-ƛ (subst-ξ (ts ↑) r)
 map-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → subst t ts →β* subst t' ts
 map-subst ts ✦ = ✦
 map-subst ts (r ‣ rs) = subst-ξ ts r ‣ map-subst ts rs
+
+
+-- β-reduction of substitutions
+
+data _⇛β_ : Sub Γ Δ → Sub Γ Δ → Set where
+   [] : {ts ts' : Sub [] Δ} → ts ⇛β ts'
+   _∷_ : {t t' : Δ ⊢ σ}{ts ts' : Sub Γ Δ} → t →β t' → ts ⇛β ts' → (t ∷ ts) ⇛β (t' ∷ ts')
+
+lookup⇛β : {ts ts' : Sub Γ Δ}{σ : Type}(x : Γ ∋ σ) → ts ⇛β ts' → lookup x ts →β lookup x ts'
+lookup⇛β ze (r ∷ rs) = r
+lookup⇛β (su x) (r ∷ rs) = lookup⇛β x rs
+
+mapSub⇛β : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t →β t' → f t →β f t') → {ts ts' : Sub Γ Δ} → ts ⇛β ts' → mapSub f ts ⇛β mapSub f ts'
+mapSub⇛β psv [] = []
+mapSub⇛β psv (r ∷ rs) = psv r ∷ mapSub⇛β psv rs
+
+_⤊β : ∀{σ} → {ts ts' : Sub Γ Δ} → ts ⇛β ts' → (_↑ {σ = σ} ts) ⇛β (ts' ↑)
+rs ⤊β = same refl ∷ mapSub⇛β (rename-ξ wk) rs
+
+idSub⇛βidSub : ∀{Γ} → idSub {Γ} ⇛β idSub
+idSub⇛βidSub {[]} = []
+idSub⇛βidSub {σ ∷ Γ} = idSub⇛βidSub ⤊β
+
+subst-Sub-ξ : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⇛β ts' → subst t ts →β subst t ts'
+subst-Sub-ξ (` ze) (r ∷ rs) = r
+subst-Sub-ξ (` su x) (r ∷ rs) = subst-Sub-ξ (` x) rs
+subst-Sub-ξ yes rs = same refl
+subst-Sub-ξ no rs = same refl
+subst-Sub-ξ ⟨⟩ rs = same refl
+subst-Sub-ξ (t , s) rs = ξ-pair (subst-Sub-ξ t rs) (subst-Sub-ξ s rs)
+subst-Sub-ξ (π₁ t) rs = ξ-π₁ (subst-Sub-ξ t rs)
+subst-Sub-ξ (π₂ t) rs = ξ-π₂ (subst-Sub-ξ t rs)
+subst-Sub-ξ (t · s) rs = ξ-app (subst-Sub-ξ t rs) (subst-Sub-ξ s rs)
+subst-Sub-ξ (ƛ t) rs = ξ-ƛ (subst-Sub-ξ t (rs ⤊β)) 
+
+/x-ξ : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β s' → (t [ s /x]) →β (t [ s' /x])
+/x-ξ t r = subst-Sub-ξ t (r ∷ idSub⇛βidSub)
+
+map-/x : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β* s' → (t [ s /x]) →β* (t [ s' /x])
+map-/x t ✦ = ✦
+map-/x t (r ‣ rs) = /x-ξ t r ‣ map-/x t rs
