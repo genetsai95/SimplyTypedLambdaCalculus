@@ -123,8 +123,7 @@ idSub⇛βidSub {[]} = []
 idSub⇛βidSub {σ ∷ Γ} = idSub⇛βidSub ⤊β
 
 subst-Sub-ξ : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⇛β ts' → subst t ts →β subst t ts'
-subst-Sub-ξ (` ze) (r ∷ rs) = r
-subst-Sub-ξ (` su x) (r ∷ rs) = subst-Sub-ξ (` x) rs
+subst-Sub-ξ (` x) rs = lookup⇛β x rs
 subst-Sub-ξ yes rs = same refl
 subst-Sub-ξ no rs = same refl
 subst-Sub-ξ ⟨⟩ rs = same refl
@@ -140,3 +139,48 @@ subst-Sub-ξ (ƛ t) rs = ξ-ƛ (subst-Sub-ξ t (rs ⤊β))
 map-/x : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β* s' → (t [ s /x]) →β* (t [ s' /x])
 map-/x t ✦ = ✦
 map-/x t (r ‣ rs) = /x-ξ t r ‣ map-/x t rs
+
+data _⇛β*_ : Sub Γ Δ → Sub Γ Δ → Set where
+   [] : {ts ts' : Sub [] Δ} → ts ⇛β* ts'
+   _∷_ : {t t' : Δ ⊢ σ}{ts ts' : Sub Γ Δ} → t →β* t' → ts ⇛β* ts' → (t ∷ ts) ⇛β* (t' ∷ ts')
+
+lookup⇛β* : {ts ts' : Sub Γ Δ}{σ : Type}(x : Γ ∋ σ) → ts ⇛β* ts' → lookup x ts →β* lookup x ts'
+lookup⇛β* ze (r ∷ _) = r
+lookup⇛β* (su x) (_ ∷ rs) = lookup⇛β* x rs 
+
+_✴ : {ts ts' : Sub Γ Δ} → ts ⇛β ts' → ts ⇛β* ts'
+[] ✴ = []
+(r ∷ rs) ✴ = (r ‣ ✦) ∷ (rs ✴)
+
+✦✦ : {ts : Sub Γ Δ} → ts ⇛β* ts
+✦✦ {ts = []} = [] 
+✦✦ {ts = t ∷ ts} = ✦ ∷ ✦✦
+
+_‣‣_ : {ts ts' ts'' : Sub Γ Δ} → ts ⇛β ts' → ts' ⇛β* ts'' → ts ⇛β* ts''
+[] ‣‣ _ = [] 
+(r ∷ rs) ‣‣ (r' ∷ rs') = (r ‣ r') ∷ (rs ‣‣ rs')
+
+_▷▷_ : {ts ts' ts'' : Sub Γ Δ} → ts ⇛β* ts' → ts' ⇛β* ts'' → ts ⇛β* ts''
+[] ▷▷ _ = []
+(r₁ ∷ rs₁) ▷▷ (r₂ ∷ rs₂) = (r₁ ▷ r₂) ∷ (rs₁ ▷▷ rs₂)
+
+mapSub⇛β* : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t →β* t' → f t →β* f t') → {ts ts' : Sub Γ Δ} → ts ⇛β* ts' → mapSub f ts ⇛β* mapSub f ts'
+mapSub⇛β* psv [] = []
+mapSub⇛β* psv (r ∷ rs) = psv r ∷ mapSub⇛β* psv rs
+
+_⤊β* : ∀{σ} → {ts ts' : Sub Γ Δ} → ts ⇛β* ts' → (_↑ {σ = σ} ts) ⇛β* (ts' ↑)
+rs ⤊β* = ✦ ∷ mapSub⇛β* (map-rename wk) rs
+
+idSub⇛β*idSub : ∀{Γ} → idSub {Γ} ⇛β* idSub
+idSub⇛β*idSub = idSub⇛βidSub ✴
+
+map-subst-Sub : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⇛β* ts' → subst t ts →β* subst t ts'
+map-subst-Sub (` x) rs = lookup⇛β* x rs 
+map-subst-Sub yes rs = ✦
+map-subst-Sub no rs = ✦
+map-subst-Sub ⟨⟩ rs = ✦
+map-subst-Sub (t , s) rs = map-pair (map-subst-Sub t rs) (map-subst-Sub s rs)
+map-subst-Sub (π₁ t) rs = map-π₁ (map-subst-Sub t rs)
+map-subst-Sub (π₂ t) rs = map-π₂ (map-subst-Sub t rs)
+map-subst-Sub (t · s) rs = map-app (map-subst-Sub t rs) (map-subst-Sub s rs)
+map-subst-Sub (ƛ t) rs = map-ƛ (map-subst-Sub t (rs ⤊β*))
