@@ -133,15 +133,15 @@ compNormal {σ = σ ⇒ τ} {t} nt = inl (t , ✦ , nt)
 --                                             in s , ✦ , t'' , same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→ƛt'' , λ Θ' ρ' s' c' → f Θ' ρ' s' c'
 
 
--- ⇑ˢ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ˢ ts
--- ⇑ˢ [] Δ [] [] = []
--- ⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
+⇑ˢ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ˢ ts
+⇑ˢ [] Δ [] [] = []
+⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
 
--- eval : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t →β* t') × Comp σ t')
--- eval {Γ} t = let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
---              in t' , transport (λ y → y →β* t') (subst-idSub {t = t}) t[id]→t' , t'cs
+eval : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t →β* t') × Comp σ t')
+eval {Γ} t = let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
+             in t' , transport (λ y → y →β* t') (subst-idSub {t = t}) t[id]→t' , t'cs
 
--- normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t →β* t') × Normal Γ σ t')
--- normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
---                        in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
---                           in t'' , t→t' ▷ t'→t'' , nt''
+normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t →β* t') × Normal Γ σ t')
+normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
+                       in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
+                          in t'' , t→t' ▷ t'→t'' , nt''
