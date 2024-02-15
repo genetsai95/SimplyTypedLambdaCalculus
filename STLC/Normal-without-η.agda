@@ -54,3 +54,19 @@ idSub-is-neutral {Γ} = neutralsub-each idSub each
     where
         each : ∀{σ} → (x : Γ ∋ σ) → Neutral Γ σ (lookup x idSub)
         each {σ} x = transport (Neutral Γ σ) (≡-sym lookup-idSub) (` x)
+
+-- substitution with normal terms
+data NormalSub : Sub Γ Δ → Set where
+    [] : NormalSub ([] {Γ})
+    _∷_ : {t : Δ ⊢ σ}{ts : Sub Γ Δ} → Normal Δ σ t → NormalSub ts → NormalSub (t ∷ ts)
+
+normalsub-each : (ts : Sub Γ Δ) → (∀{σ} → (x : Γ ∋ σ) → Normal Δ σ (lookup x ts)) → NormalSub ts
+normalsub-each [] nf-each = []
+normalsub-each (t ∷ ts) nf-each = nf-each ze ∷ normalsub-each ts (nf-each ∘ su)
+
+neutralsub-is-normalsub : {ts : Sub Γ Δ} → NeutralSub ts → NormalSub ts
+neutralsub-is-normalsub [] = []
+neutralsub-is-normalsub (n ∷ ns) = (‘ n) ∷ neutralsub-is-normalsub ns
+
+idSub-is-normal : ∀{Γ} → NormalSub (idSub {Γ})
+idSub-is-normal = neutralsub-is-normalsub idSub-is-neutral
