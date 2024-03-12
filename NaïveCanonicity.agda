@@ -40,13 +40,13 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 ⟦ no ⟧ ts cs = no , ✦ , no , ✦ , inr refl
 ⟦ ⟨⟩ ⟧ ts cs = ⟨⟩ , ✦ , `nil
 ⟦ t , s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , tcs | s' , s[ts]→s' , scs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , β-π₁ ‣ ✦ , β-π₂ ‣ ✦ , tcs , scs
+... | t' , t[ts]→t' , tcs | s' , s[ts]→s' , scs = (t' , s') , ξ-pair* t[ts]→t' s[ts]→s' , t' , s' , β-π₁ ‣ ✦ , β-π₂ ‣ ✦ , tcs , scs
 ⟦ π₁ t ⟧ ts cs with ⟦ t ⟧ ts cs
-... | t' , t[ts]→t' , t'' , _ , π₁t'→t'' , _ , t''cs , _ = t'' , map-π₁ t[ts]→t' ▷ π₁t'→t'' , t''cs
+... | t' , t[ts]→t' , t'' , _ , π₁t'→t'' , _ , t''cs , _ = t'' , ξ-π₁* t[ts]→t' ▷ π₁t'→t'' , t''cs
 ⟦ π₂ t ⟧ ts cs with ⟦ t ⟧ ts cs
-... | t' , t[ts]→t' , _ , t'' , _ , π₂t'→t'' , _ , t''cs = t'' , map-π₂ t[ts]→t' ▷ π₂t'→t'' , t''cs
+... | t' , t[ts]→t' , _ , t'' , _ , π₂t'→t'' , _ , t''cs = t'' , ξ-π₂* t[ts]→t' ▷ π₂t'→t'' , t''cs
 ⟦ t · s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , scs = (t'' · s') , map-app (t[ts]→t' ▷ t'→t'') s[ts]→s' , f s' scs
+... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , scs = (t'' · s') , ξ-app* (t[ts]→t' ▷ t'→t'') s[ts]→s' , f s' scs
 ⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
                           λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→t''' , eq) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
                                    in t''' , (β-ƛ ‣ same (lem[sub1] t ts t') ‣ ✦) ▷ t[t'∷ts]→t'' ▷ t''→t''' , eq
@@ -54,8 +54,8 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 ⟦ ƛ_ {τ = τ ẋ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
                               λ t' c → let (t'' , t[t'∷ts]→t'' , s , s' , π₁t''→s , π₂t''→s' , scs , s'cs) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs)
                                        in s , s' ,
-                                          map-π₁ ((β-ƛ ‣ same (lem[sub1] t ts t') ‣ ✦) ▷ t[t'∷ts]→t'') ▷ π₁t''→s ,
-                                          map-π₂ ((β-ƛ ‣ same (lem[sub1] t ts t') ‣ ✦) ▷ t[t'∷ts]→t'') ▷ π₂t''→s' , scs , s'cs
+                                          ξ-π₁* ((β-ƛ ‣ same (lem[sub1] t ts t') ‣ ✦) ▷ t[t'∷ts]→t'') ▷ π₁t''→s ,
+                                          ξ-π₂* ((β-ƛ ‣ same (lem[sub1] t ts t') ‣ ✦) ▷ t[t'∷ts]→t'') ▷ π₂t''→s' , scs , s'cs
 ⟦ ƛ_ {τ = τ ⇒ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
                               λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→t''' , f) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs)
                                        in t''' , (β-ƛ ‣ same (lem[sub1] t ts t') ‣ ✦) ▷ t[t'∷ts]→t'' ▷ t''→t''' , λ s c' → f s c' 

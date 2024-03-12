@@ -44,7 +44,7 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 -- ⟦ yes ⟧ ts cs = inl ✦
 -- ⟦ no ⟧ ts cs = inr ✦
 -- ⟦ ⟨⟩ ⟧ ts cs = `nil
--- ⟦ t , s ⟧ ts cs = (t [ ts ]) , (s [ ts ]) , map-pair ✦ ✦ , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
+-- ⟦ t , s ⟧ ts cs = (t [ ts ]) , (s [ ts ]) , ξ-pair* ✦ ✦ , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
 -- ⟦ π₁ t ⟧ ts cs = let (t₁ , t₂ , t→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs
 --                  in {!   !}
 -- ⟦ π₂ t ⟧ ts cs = let (t₁ , t₂ , t→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs 
@@ -58,14 +58,14 @@ lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
 ⟦ ` x ⟧ ts cs = ((` x) [ ts ]) , ✦ , lookupˢ x cs
 ⟦ no ⟧ ts cs = no , ✦ , inr ✦
 ⟦ ⟨⟩ ⟧ ts cs = ⟨⟩ , ✦ , `nil
-⟦ t , s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs --(t [ ts ]) , (s [ ts ]) , map-pair ✦ ✦ , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = ((t [ ts ]) , (s [ ts ])) , map-pair ✦ ✦ , t' , s' , map-pair t[ts]→t' s[ts]→s' , t'cs , s'cs
+⟦ t , s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs --(t [ ts ]) , (s [ ts ]) , ξ-pair* ✦ ✦ , ⟦ t ⟧ ts cs , ⟦ s ⟧ ts cs
+... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = ((t [ ts ]) , (s [ ts ])) , ξ-pair* ✦ ✦ , t' , s' , ξ-pair* t[ts]→t' s[ts]→s' , t'cs , s'cs
 ⟦ π₁ t ⟧ ts cs = let (t' , t[ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs
-                 in t₁ , map-π₁ (t[ts]→t' ▷ t'→t₁,t₂) ▷ (β-π₁ ‣ ✦) , t₁cs
+                 in t₁ , ξ-π₁* (t[ts]→t' ▷ t'→t₁,t₂) ▷ (β-π₁ ‣ ✦) , t₁cs
 ⟦ π₂ t ⟧ ts cs = let (t' , t[ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ ts cs
-                 in t₂ , map-π₂ (t[ts]→t' ▷ t'→t₁,t₂) ▷ (β-π₂ ‣ ✦) , t₂cs
+                 in t₂ , ξ-π₂* (t[ts]→t' ▷ t'→t₁,t₂) ▷ (β-π₂ ‣ ✦) , t₂cs
 ⟦ t · s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , t'' , t'→ƛt'' , f | s' , s[ts]→s' , s'cs = (t'' [ s' /x]) , map-app (t[ts]→t' ▷ t'→ƛt'') s[ts]→s' ▷ (β-ƛ ‣ ✦) , f s' s'cs
+... | t' , t[ts]→t' , t'' , t'→ƛt'' , f | s' , s[ts]→s' , s'cs = (t'' [ s' /x]) , ξ-app* (t[ts]→t' ▷ t'→ƛt'') s[ts]→s' ▷ (β-ƛ ‣ ✦) , f s' s'cs
 ⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , subst t (ts ↑) , ✦ , 
                             λ t' c → let (t'' , t[t'∷ts]→t'' , t''cs) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
                                      in {! t''cs  !}
