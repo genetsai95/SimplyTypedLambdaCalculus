@@ -32,29 +32,29 @@ _▷_ : {t u v : Γ ⊢ σ} → t →β* u → u →β* v → t →β* v
 
 -- ξ-rules for →β*
 
-map-π₁ : {t u : Γ ⊢ σ ẋ τ} → t →β* u → π₁ t →β* π₁ u
-map-π₁ ✦ = ✦
-map-π₁ (r ‣ rs) = ξ-π₁ r ‣ map-π₁ rs
+ξ-π₁* : {t u : Γ ⊢ σ ẋ τ} → t →β* u → π₁ t →β* π₁ u
+ξ-π₁* ✦ = ✦
+ξ-π₁* (r ‣ rs) = ξ-π₁ r ‣ ξ-π₁* rs
 
-map-π₂ : {t u : Γ ⊢ σ ẋ τ} → t →β* u → π₂ t →β* π₂ u
-map-π₂ ✦ = ✦
-map-π₂ (r ‣ rs) = ξ-π₂ r ‣ map-π₂ rs
+ξ-π₂* : {t u : Γ ⊢ σ ẋ τ} → t →β* u → π₂ t →β* π₂ u
+ξ-π₂* ✦ = ✦
+ξ-π₂* (r ‣ rs) = ξ-π₂ r ‣ ξ-π₂* rs
 
-map-pair : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t →β* t' → s →β* s' → (t , s) →β* (t' , s')
-map-pair ✦ ✦ = ✦
-map-pair ✦ (r ‣ rs) = ξ-pair (same refl) r ‣ map-pair ✦ rs
-map-pair (r ‣ rs) ✦ = ξ-pair r (same refl) ‣ map-pair rs ✦
-map-pair (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-pair r₁ r₂ ‣ map-pair rs₁ rs₂
+ξ-pair* : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t →β* t' → s →β* s' → (t , s) →β* (t' , s')
+ξ-pair* ✦ ✦ = ✦
+ξ-pair* ✦ (r ‣ rs) = ξ-pair (same refl) r ‣ ξ-pair* ✦ rs
+ξ-pair* (r ‣ rs) ✦ = ξ-pair r (same refl) ‣ ξ-pair* rs ✦
+ξ-pair* (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-pair r₁ r₂ ‣ ξ-pair* rs₁ rs₂
 
-map-app : {t t' : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → t →β* t' → s →β* s' → (t · s) →β* (t' · s')
-map-app ✦ ✦ = ✦
-map-app ✦ (r ‣ rs) = ξ-app (same refl) r ‣ map-app ✦ rs
-map-app (r ‣ rs) ✦ = ξ-app r (same refl) ‣ map-app rs ✦  
-map-app (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-app r₁ r₂ ‣ map-app rs₁ rs₂
+ξ-app* : {t t' : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → t →β* t' → s →β* s' → (t · s) →β* (t' · s')
+ξ-app* ✦ ✦ = ✦
+ξ-app* ✦ (r ‣ rs) = ξ-app (same refl) r ‣ ξ-app* ✦ rs
+ξ-app* (r ‣ rs) ✦ = ξ-app r (same refl) ‣ ξ-app* rs ✦  
+ξ-app* (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-app r₁ r₂ ‣ ξ-app* rs₁ rs₂
 
-map-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t →β* t' → (ƛ t) →β* (ƛ t')
-map-ƛ ✦ = ✦
-map-ƛ (r ‣ rs) = ξ-ƛ r ‣ map-ƛ rs
+ξ-ƛ* : {t t' : σ ∷ Γ ⊢ τ} → t →β* t' → (ƛ t) →β* (ƛ t')
+ξ-ƛ* ✦ = ✦
+ξ-ƛ* (r ‣ rs) = ξ-ƛ r ‣ ξ-ƛ* rs
 
 rename-ξ : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t →β t' → rename ρ t →β rename ρ t'
 rename-ξ ρ (same refl) = same refl
@@ -67,9 +67,9 @@ rename-ξ ρ (ξ-π₁ r) = ξ-π₁ (rename-ξ ρ r)
 rename-ξ ρ (ξ-π₂ r) = ξ-π₂ (rename-ξ ρ r)
 rename-ξ ρ (ξ-ƛ r) = ξ-ƛ (rename-ξ (lift ρ) r)
 
-map-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → rename ρ t →β* rename ρ t'
-map-rename ρ ✦ = ✦
-map-rename ρ (r ‣ rs) = rename-ξ ρ r ‣ map-rename ρ rs
+rename-ξ* : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → rename ρ t →β* rename ρ t'
+rename-ξ* ρ ✦ = ✦
+rename-ξ* ρ (r ‣ rs) = rename-ξ ρ r ‣ rename-ξ* ρ rs
 
 subst-ξ : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β t' → subst t ts →β subst t' ts
 subst-ξ ts (same refl) = same refl
@@ -96,9 +96,9 @@ subst-ξ ts (ξ-π₁ r) = ξ-π₁ (subst-ξ ts r)
 subst-ξ ts (ξ-π₂ r) = ξ-π₂ (subst-ξ ts r)
 subst-ξ ts (ξ-ƛ r) = ξ-ƛ (subst-ξ (ts ↑) r)
 
-map-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → subst t ts →β* subst t' ts
-map-subst ts ✦ = ✦
-map-subst ts (r ‣ rs) = subst-ξ ts r ‣ map-subst ts rs
+subst-ξ* : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → subst t ts →β* subst t' ts
+subst-ξ* ts ✦ = ✦
+subst-ξ* ts (r ‣ rs) = subst-ξ ts r ‣ subst-ξ* ts rs
 
 
 -- β-reduction of substitutions
@@ -136,9 +136,9 @@ subst-Sub-ξ (ƛ t) rs = ξ-ƛ (subst-Sub-ξ t (rs ⤊β))
 /x-ξ : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β s' → (t [ s /x]) →β (t [ s' /x])
 /x-ξ t r = subst-Sub-ξ t (r ∷ idSub⇛βidSub)
 
-map-/x : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β* s' → (t [ s /x]) →β* (t [ s' /x])
-map-/x t ✦ = ✦
-map-/x t (r ‣ rs) = /x-ξ t r ‣ map-/x t rs
+/x-ξ* : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β* s' → (t [ s /x]) →β* (t [ s' /x])
+/x-ξ* t ✦ = ✦
+/x-ξ* t (r ‣ rs) = /x-ξ t r ‣ /x-ξ* t rs
 
 data _⇛β*_ : Sub Γ Δ → Sub Γ Δ → Set where
    [] : {ts ts' : Sub [] Δ} → ts ⇛β* ts'
@@ -169,18 +169,18 @@ mapSub⇛β* psv [] = []
 mapSub⇛β* psv (r ∷ rs) = psv r ∷ mapSub⇛β* psv rs
 
 _⤊β* : ∀{σ} → {ts ts' : Sub Γ Δ} → ts ⇛β* ts' → (_↑ {σ = σ} ts) ⇛β* (ts' ↑)
-rs ⤊β* = ✦ ∷ mapSub⇛β* (map-rename wk) rs
+rs ⤊β* = ✦ ∷ mapSub⇛β* (rename-ξ* wk) rs
 
 idSub⇛β*idSub : ∀{Γ} → idSub {Γ} ⇛β* idSub
 idSub⇛β*idSub = idSub⇛βidSub ✴
 
-map-subst-Sub : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⇛β* ts' → subst t ts →β* subst t ts'
-map-subst-Sub (` x) rs = lookup⇛β* x rs 
-map-subst-Sub yes rs = ✦
-map-subst-Sub no rs = ✦
-map-subst-Sub ⟨⟩ rs = ✦
-map-subst-Sub (t , s) rs = map-pair (map-subst-Sub t rs) (map-subst-Sub s rs)
-map-subst-Sub (π₁ t) rs = map-π₁ (map-subst-Sub t rs)
-map-subst-Sub (π₂ t) rs = map-π₂ (map-subst-Sub t rs)
-map-subst-Sub (t · s) rs = map-app (map-subst-Sub t rs) (map-subst-Sub s rs)
-map-subst-Sub (ƛ t) rs = map-ƛ (map-subst-Sub t (rs ⤊β*))
+subst-ξ*-Sub : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⇛β* ts' → subst t ts →β* subst t ts'
+subst-ξ*-Sub (` x) rs = lookup⇛β* x rs 
+subst-ξ*-Sub yes rs = ✦
+subst-ξ*-Sub no rs = ✦
+subst-ξ*-Sub ⟨⟩ rs = ✦
+subst-ξ*-Sub (t , s) rs = ξ-pair* (subst-ξ*-Sub t rs) (subst-ξ*-Sub s rs)
+subst-ξ*-Sub (π₁ t) rs = ξ-π₁* (subst-ξ*-Sub t rs)
+subst-ξ*-Sub (π₂ t) rs = ξ-π₂* (subst-ξ*-Sub t rs)
+subst-ξ*-Sub (t · s) rs = ξ-app* (subst-ξ*-Sub t rs) (subst-ξ*-Sub s rs)
+subst-ξ*-Sub (ƛ t) rs = ξ-ƛ* (subst-ξ*-Sub t (rs ⤊β*))
