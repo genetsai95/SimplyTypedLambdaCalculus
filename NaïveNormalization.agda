@@ -13,6 +13,7 @@ Comp {Γ} (σ ⇒ τ) t = Σ (Γ ⊢ σ ⇒ τ) (λ t' → (t ⟶⋆ t') ×
                                            → Σ (Θ ⊢ σ) (λ a' → (a ⟶⋆ a') × (Comp τ (rename ρ t' · a'))))
                                     )
 
+-- substitute variables in Γ with terms under context Δ
 ⟦_⟧ᶜ : Cxt → Cxt → Set
 ⟦ Γ ⟧ᶜ Δ = Sub Γ Δ
 
@@ -21,6 +22,7 @@ t [ ts ] = subst t ts
 
 infix 25 _[_]
 
+-- a list of computability structures corresponding to each term in a given substution
 data ⟦_⟧ˢ : (Γ : Cxt) → ⟦ Γ ⟧ᶜ Δ → Set where
     [] : ∀{Δ} → ⟦ [] ⟧ˢ ([] {Δ})
     _∷_ : ∀{σ} → {t : Δ ⊢ σ}{ts : ⟦ Γ ⟧ᶜ Δ} → Comp σ t → ⟦ Γ ⟧ˢ ts → ⟦ (σ ∷ Γ) ⟧ˢ (t ∷ ts)
@@ -33,6 +35,7 @@ mapˢ : (fₜ : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ)(fₛ : ∀{σ} → {t : Δ 
 mapˢ fₜ fₛ [] = []
 mapˢ fₜ fₛ (c ∷ cs) = fₛ c ∷ mapˢ fₜ fₛ cs
 
+-- renaming preserves computability structures
 rename-comp : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
 rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
 rename-comp {σ = 𝟙} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
@@ -44,6 +47,7 @@ rename-comp {σ = σ ⇒ τ} ρ t (t' , t→t' , f) = rename ρ t' , map-rename 
 renameˢ : (ρ : Ren Δ Θ){ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (mapSub (rename ρ) ts)
 renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 
+-- mapping a substition (with the Comp for each term) to the Comp for each term after substitution
 ⟦_⟧ : (t : Γ ⊢ σ) → (Δ : Cxt)(ts : ⟦ Γ ⟧ᶜ Δ)(cs : ⟦ Γ ⟧ˢ ts) → Σ (Δ ⊢ σ) (λ t' → ((t [ ts ]) ⟶⋆ t') × Comp σ t')
 ⟦ ` x ⟧ Δ ts cs = lookup x ts , ✦ , lookupˢ x cs
 ⟦ yes ⟧ Δ ts cs = yes , ✦ , yes , ✦ , yes
@@ -82,6 +86,8 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
                                                  λ Θ' ρ' s' c → f Θ' ρ' s' c
 
 
+-- ⇓ generates normal form from Comp
+-- ⇑ generates Comp from neutral forms
 ⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
 ⇑ : (Γ : Cxt)(σ : Type) → ((t , _) : Σ (Γ ⊢ σ) (Neutral Γ σ)) → Comp σ t
 
@@ -103,10 +109,12 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⇑ˢ [] Δ [] [] = []
 ⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
 
+-- evaluate the computability structure for each term
 eval : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Comp σ t')
 eval {Γ} t = let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
              in t' , transport (λ y → y ⟶⋆ t') (subst-idSub {t = t}) t[id]→t' , t'cs
 
+-- normalization by first evaluate a term to its Comp and extract normal form from it
 normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
 normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
                        in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
