@@ -11,7 +11,7 @@ Comp {Γ} (σ ẋ τ) t = Σ (Γ ⊢ σ) (λ t' → Σ (Γ ⊢ τ) (λ t'' → (
 Comp {Γ} (σ ⇒ τ) t = Σ (Γ ⊢ σ ⇒ τ) (λ t' → (t ⟶⋆ t') × 
                                            ((Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) 
                                            → Σ (Θ ⊢ σ) (λ a' → (a ⟶⋆ a') × (Comp τ (rename ρ t' · a'))))
-                                    ) -- delete t' , a' ?
+                                    )
 
 -- substitute variables in Γ with terms under context Δ
 ⟦_⟧ᶜ : Cxt → Cxt → Set
@@ -110,22 +110,21 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
 
 -- evaluate the computability structure for each term
-eval : (t : Γ ⊢ σ) → Comp σ t -- Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Comp σ t')
-eval {Γ} t = {! ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral)   !}
-            --  let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
-            --  in t' , transport (λ y → y ⟶⋆ t') (subst-idSub {t = t}) t[id]→t' , t'cs
+eval : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Comp σ t')
+eval {Γ} t = let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
+             in t' , transport (λ y → y ⟶⋆ t') (subst-idSub {t = t}) t[id]→t' , t'cs
 
 -- normalization by first evaluate a term to its Comp and extract normal form from it
--- normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
--- normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
---                        in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
---                           in t'' , t→t' ▷ t'→t'' , nt''
+normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
+normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
+                       in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
+                          in t'' , t→t' ▷ t'→t'' , nt''
 
--- test : [] ⊢ Ans
--- test = π₁ (((ƛ (` ze)) · yes) , no)
+test : [] ⊢ Ans
+test = π₁ (((ƛ (` ze)) · yes) , no)
 
--- test' : (𝟙 ẋ Ans) ∷ [] ⊢ Ans
--- test' = π₂ (π₁ (π₂ (⟨⟩ , (` ze)) , no))
+test' : (𝟙 ẋ Ans) ∷ [] ⊢ Ans
+test' = π₂ (π₁ (π₂ (⟨⟩ , (` ze)) , no))
 
 
 _ : {A : Set} → {f : ⊤ → A} → (λ x → f `nil) ≡ f
