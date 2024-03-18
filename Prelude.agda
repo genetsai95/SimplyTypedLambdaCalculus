@@ -4,8 +4,8 @@ open import Data.Char
 open import Agda.Primitive
 
 data ⊥ : Set where
-data ⊤ : Set where
-    `nil : ⊤
+record ⊤ : Set where
+    constructor `nil
 data 𝟚 : Set where
     `t `f : 𝟚
 
