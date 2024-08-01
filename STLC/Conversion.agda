@@ -56,6 +56,12 @@ map⟶⋆ f ξ (r ‣ rs) = ξ r ‣ map⟶⋆ f ξ rs
 ⟶≡ : {t s s' : Γ ⊢ σ} → s ≡ s' → t ⟶ s → t ⟶ s'
 ⟶≡ refl t→s = t→s
 
+≡⟶⋆ : {t t' s : Γ ⊢ σ} → t ≡ t' → t ⟶⋆ s → t' ⟶⋆ s
+≡⟶⋆ refl t→s = t→s
+
+⟶⋆≡ : {t s s' : Γ ⊢ σ} → s ≡ s' → t ⟶⋆ s → t ⟶⋆ s'
+⟶⋆≡ refl t→s = t→s
+
 ξ-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → rename ρ t ⟶ rename ρ t'
 ξ-rename ρ β-π₁ = β-π₁
 ξ-rename ρ β-π₂ = β-π₂
