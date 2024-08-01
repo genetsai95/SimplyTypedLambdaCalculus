@@ -33,10 +33,10 @@ mapˢ fₜ fₛ [] = []
 mapˢ fₜ fₛ (c ∷ cs) = fₛ c ∷ mapˢ fₜ fₛ cs
 
 rename-comp : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
-rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
-rename-comp {σ = 𝟙} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
-rename-comp {σ = σ ẋ τ} ρ t (s , s' , t→s,s' , scs , s'cs) = rename ρ s , rename ρ s' , map-rename ρ t→s,s' ▷ map-pair ✦ ✦ , rename-comp ρ s scs , rename-comp ρ s' s'cs
-rename-comp {σ = σ ⇒ τ} ρ t (t' , t→t' , f) = rename (lift ρ) t' , map-rename ρ t→t' , 
+rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , ξ-rename⋆ ρ t→t' , rename-nf ρ nt'
+rename-comp {σ = 𝟙} ρ t (t' , t→t' , nt') = rename ρ t' , ξ-rename⋆ ρ t→t' , rename-nf ρ nt'
+rename-comp {σ = σ ẋ τ} ρ t (s , s' , t→s,s' , scs , s'cs) = rename ρ s , rename ρ s' , ξ-rename⋆ ρ t→s,s' ▷ ξ-,⋆ ✦ ✦ , rename-comp ρ s scs , rename-comp ρ s' s'cs
+rename-comp {σ = σ ⇒ τ} ρ t (t' , t→t' , f) = rename (lift ρ) t' , ξ-rename⋆ ρ t→t' , 
                                               λ Θ ρ' s c → let (s' , s→s' , s'cs) = f Θ (concatRen ρ ρ') s c 
                                                            in s' , s→s' ,
                                                               transport (λ y → Comp τ (y [ s' /x])) 
@@ -57,27 +57,27 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⟦ no ⟧ Δ ts cs = no , ✦ , no , ✦ , no
 ⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , ✦ , ⟨⟩ , ✦ , ⟨⟩ --⟨⟩ , ✦ , `nil
 ⟦ t , s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
-... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , ✦ , t'cs , s'cs
+... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , ξ-,⋆ t[ts]→t' s[ts]→s' , t' , s' , ✦ , t'cs , s'cs
 ⟦ π₁ t ⟧ Δ ts cs = let (t' , t[ts]→t' , t'' , _ , t'→t'',s , t''cs , _ ) = ⟦ t ⟧ Δ ts cs 
-                   in t'' , map-π₁ (t[ts]→t' ▷ t'→t'',s) ▷ (β-π₁ ‣ ✦) , t''cs
+                   in t'' , ξ-π₁⋆ (t[ts]→t' ▷ t'→t'',s) ▷ (β-π₁ ‣ ✦) , t''cs
 ⟦ π₂ t ⟧ Δ ts cs = let (t' , t[ts]→t' , _ , t'' , t'→s,t'' , _ , t''cs) = ⟦ t ⟧ Δ ts cs 
-                   in t'' , map-π₂ (t[ts]→t' ▷ t'→s,t'') ▷ (β-π₂ ‣ ✦) , t''cs
+                   in t'' , ξ-π₂⋆ (t[ts]→t' ▷ t'→s,t'') ▷ (β-π₂ ‣ ✦) , t''cs
 ⟦ _·_ {τ = τ} t s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
 ... | t' , t[ts]→t' , t'' , t'→ƛt'' , f | s' , s[ts]→s' , s'cs = let (s'' , s'→s'' , s''cs) = f Δ idRen s' s'cs 
-                                                                 in (t'' [ s'' /x]) , map-app (t[ts]→t' ▷ t'→ƛt'') (s[ts]→s' ▷ s'→s'') ▷ (β-ƛ ‣ ✦) ,
+                                                                 in (t'' [ s'' /x]) , ξ-·⋆ (t[ts]→t' ▷ t'→ƛt'') (s[ts]→s' ▷ s'→s'') ▷ (β-ƛ ‣ ✦) ,
                                                                     transport (λ y → Comp τ (y [ s'' /x])) (rename-idRen t'') s''cs
 ⟦ ƛ_ {τ = Ans} t ⟧   Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (t [ (ts ↑) ]) , ✦ , 
                                 λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
-                                            in s , ✦ ,  t'' , same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t'' , nt''
+                                            in s , ✦ ,  t'' , ≡⟶⋆ (≡-sym (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t' ▷ t'→t'' , nt''
 ⟦ ƛ_ {τ = 𝟙} t ⟧     Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (t [ (ts ↑) ]) , ✦ , 
                                 λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
-                                            in s , ✦ , t'' , same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t'' , nt''
+                                            in s , ✦ , t'' , ≡⟶⋆ (≡-sym (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t' ▷ t'→t'' , nt''
 ⟦ ƛ_ {τ = σ ẋ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (t [ (ts ↑) ]) , ✦ ,
                                 λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t₁ , t₂ , t'→t₁,t₂ , t₁cs , t₂cs) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
-                                            in s , ✦ , t₁ , t₂ , same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t₁,t₂ , t₁cs , t₂cs
+                                            in s , ✦ , t₁ , t₂ , ≡⟶⋆ (≡-sym (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t' ▷ t'→t₁,t₂ , t₁cs , t₂cs
 ⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (t [ (ts ↑) ]) , ✦ , 
                                 λ Θ ρ s c → let (t' , t[s∷mr-ts]→t' , t'' , t'→ƛt'' , f) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (c ∷ renameˢ ρ cs)
-                                            in s , ✦ , t'' , same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→ƛt'' , λ Θ' ρ' s' c' → f Θ' ρ' s' c'
+                                            in s , ✦ , t'' , ≡⟶⋆ (≡-sym (subst-rename-lift-subst ρ ts t s)) t[s∷mr-ts]→t' ▷ t'→ƛt'' , λ Θ' ρ' s' c' → f Θ' ρ' s' c'
 
 
 ⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
@@ -86,14 +86,14 @@ renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
 ⇓ Γ Ans cs = cs
 ⇓ Γ 𝟙 {t} cs = cs
 ⇓ Γ (σ ẋ τ) (t₁ , t₂ , t→t₁,t₂ , t₁cs , t₂cs) with ⇓ Γ σ {t₁} t₁cs | ⇓ Γ τ {t₂} t₂cs
-... | n₁ , t₁→n₁ , nf₁ | n₂ , t₂→n₂ , nf₂ = (n₁ , n₂) , t→t₁,t₂ ▷ map-pair t₁→n₁ t₂→n₂ , (nf₁ , nf₂)
+... | n₁ , t₁→n₁ , nf₁ | n₂ , t₂→n₂ , nf₂ = (n₁ , n₂) , t→t₁,t₂ ▷ ξ-,⋆ t₁→n₁ t₂→n₂ , (nf₁ , nf₂)
 ⇓ Γ (σ ⇒ τ) (t' , t→ƛt' , f) = let (z , `ze→z , zcs) = f (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))) 
                                in let (t'' , ren-t'[z]→t'' , nt'') = ⇓ (σ ∷ Γ) τ zcs 
-                                  in (ƛ t'') , t→ƛt' ▷ (η-ƛ ‣ map-ƛ ((map-app ✦ `ze→z ▷ (β-ƛ ‣ ✦)) ▷ ren-t'[z]→t'')) , (ƛ nt'')
+                                  in (ƛ t'') , t→ƛt' ▷ (η-ƛ ‣ ξ-ƛ⋆ ((ξ-·⋆ ✦ `ze→z ▷ (β-ƛ ‣ ✦)) ▷ ren-t'[z]→t'')) , (ƛ nt'')
 
 ⇑ Γ Ans (n , ne) = n , ✦ , (‘ ne)
 ⇑ Γ 𝟙 (n , ne) = n , ✦ , (‘‘ ne)
-⇑ Γ (σ ẋ τ) (n , ne) = π₁ n , π₂ n , η-pair ‣ ✦ , ⇑ Γ σ (π₁ n , π₁ ne) , ⇑ Γ τ (π₂ n , π₂ ne)
+⇑ Γ (σ ẋ τ) (n , ne) = π₁ n , π₂ n , η-, ‣ ✦ , ⇑ Γ σ (π₁ n , π₁ ne) , ⇑ Γ τ (π₂ n , π₂ ne)
 ⇑ Γ (σ ⇒ τ) (n , ne) = (weaken {τ = σ} n · (` ze)) , η-ƛ ‣ ✦ ,
                         λ Θ ρ s c → let (s' , s→s' , nf) = ⇓ Θ σ c 
                                     in s' , s→s' , transport (λ y → Comp τ y) eq (⇑ Θ τ ((rename ρ n · s') , (rename-ne ρ ne · nf)))
