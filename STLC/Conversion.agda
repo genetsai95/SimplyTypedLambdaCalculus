@@ -7,72 +7,81 @@ open import STLC.Substitution
 open import STLC.Lemmas
 
 data _⟶_ : Γ ⊢ σ → Γ ⊢ σ → Set where
-    same : {t t' : Γ ⊢ σ} → t ≡ t' → t ⟶ t'
-    β-ƛ : {t : σ ∷ Γ ⊢ τ}{s : Γ ⊢ σ} → (ƛ t) · s ⟶ t [ s /x]
     β-π₁ : {t : Γ ⊢ σ}{s : Γ ⊢ τ} → π₁ (t , s) ⟶ t
     β-π₂ : {t : Γ ⊢ σ}{s : Γ ⊢ τ} → π₂ (t , s) ⟶ s
-    ξ-app : {t t' : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → t ⟶ t' → s ⟶ s' → t · s ⟶ t' · s'
-    ξ-pair : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t ⟶ t' → s ⟶ s' → (t , s) ⟶ (t' , s')
+    ξ-,₁ : {t t' : Γ ⊢ σ}{s : Γ ⊢ τ} → t ⟶ t' → (t , s) ⟶ (t' , s)
+    ξ-,₂ : {t : Γ ⊢ σ}{s s' : Γ ⊢ τ} → s ⟶ s' → (t , s) ⟶ (t , s')
     ξ-π₁ : {t t' : Γ ⊢ σ ẋ τ} → t ⟶ t' → π₁ t ⟶ π₁ t'
     ξ-π₂ : {t t' : Γ ⊢ σ ẋ τ} → t ⟶ t' → π₂ t ⟶ π₂ t'
+    η-, : {t : Γ ⊢ σ ẋ τ} → t ⟶ (π₁ t , π₂ t)
+
+    β-ƛ : {t : σ ∷ Γ ⊢ τ}{s : Γ ⊢ σ} → (ƛ t) · s ⟶ t [ s /x]
+    ξ-·₁ : {t t' : Γ ⊢ σ ⇒ τ}{s : Γ ⊢ σ} → t ⟶ t' → t · s ⟶ t' · s
+    ξ-·₂ : {t : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → s ⟶ s' → t · s ⟶ t · s'
     ξ-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t ⟶ t' → (ƛ t) ⟶ (ƛ t')
     η-ƛ : {t : Γ ⊢ σ ⇒ τ} → t ⟶ (ƛ (weaken {τ = σ} t · (` ze)))
-    η-pair : {t : Γ ⊢ σ ẋ τ} → t ⟶ (π₁ t , π₂ t)
 
 infixr 33 _‣_
 data _⟶⋆_ : Γ ⊢ σ → Γ ⊢ σ → Set where
-   ✦ : {t : Γ ⊢ σ} → t ⟶⋆ t
-   _‣_ : {t u v : Γ ⊢ σ} → t ⟶ u → u ⟶⋆ v → t ⟶⋆ v
+    ✦ : {t : Γ ⊢ σ} → t ⟶⋆ t
+    _‣_ : {t u v : Γ ⊢ σ} → t ⟶ u → u ⟶⋆ v → t ⟶⋆ v
 
 infixr 35 _▷_
 _▷_ : {t u v : Γ ⊢ σ} → t ⟶⋆ u → u ⟶⋆ v → t ⟶⋆ v
 ✦ ▷ rs = rs
 (r ‣ rs1) ▷ rs2 = r ‣ rs1 ▷ rs2
 
-map-π₁ : {t u : Γ ⊢ σ ẋ τ} → t ⟶⋆ u → π₁ t ⟶⋆ π₁ u
-map-π₁ ✦ = ✦
-map-π₁ (r ‣ rs) =  ξ-π₁ r ‣ map-π₁ rs
+map⟶⋆ : ∀{Γ Δ σ τ} → (f : Γ ⊢ σ → Δ ⊢ τ) → ({t t' : Γ ⊢ σ} → t ⟶ t' → f t ⟶ f t') → {t t' : Γ ⊢ σ} → t ⟶⋆ t' → f t ⟶⋆ f t'
+map⟶⋆ f ξ ✦ = ✦
+map⟶⋆ f ξ (r ‣ rs) = ξ r ‣ map⟶⋆ f ξ rs 
 
-map-π₂ : {t u : Γ ⊢ σ ẋ τ} → t ⟶⋆ u → π₂ t ⟶⋆ π₂ u
-map-π₂ ✦ = ✦
-map-π₂ (r ‣ rs) = ξ-π₂ r ‣ map-π₂ rs
+ξ-π₁⋆ : {t u : Γ ⊢ σ ẋ τ} → t ⟶⋆ u → π₁ t ⟶⋆ π₁ u
+ξ-π₁⋆ = map⟶⋆ π₁ ξ-π₁
 
-map-pair : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t ⟶⋆ t' → s ⟶⋆ s' → (t , s) ⟶⋆ (t' , s')
-map-pair ✦ ✦ = ✦
-map-pair ✦ (r ‣ rs) = ξ-pair (same refl) r ‣ map-pair ✦ rs
-map-pair (r ‣ rs) ✦ = ξ-pair r (same refl) ‣ map-pair rs ✦
-map-pair (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-pair r₁ r₂ ‣ map-pair rs₁ rs₂
+ξ-π₂⋆ : {t u : Γ ⊢ σ ẋ τ} → t ⟶⋆ u → π₂ t ⟶⋆ π₂ u
+ξ-π₂⋆ = map⟶⋆ π₂ ξ-π₂
 
-map-app : {t t' : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → t ⟶⋆ t' → s ⟶⋆ s' → (t · s) ⟶⋆ (t' · s')
-map-app ✦ ✦ = ✦
-map-app ✦ (r ‣ rs) = ξ-app (same refl) r ‣ map-app ✦ rs
-map-app (r ‣ rs) ✦ = ξ-app r (same refl) ‣ map-app rs ✦ 
-map-app (r₁ ‣ rs₁) (r₂ ‣ rs₂) = ξ-app r₁ r₂ ‣ map-app rs₁ rs₂
+ξ-,⋆ : {t t' : Γ ⊢ σ}{s s' : Γ ⊢ τ} → t ⟶⋆ t' → s ⟶⋆ s' → (t , s) ⟶⋆ (t' , s')
+ξ-,⋆ {t = t} {t'} {s} {s'} t→t' s→s' = map⟶⋆ (_, s) ξ-,₁ t→t' ▷ map⟶⋆ (t' ,_) ξ-,₂ s→s'
 
-map-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t ⟶⋆ t' → (ƛ t) ⟶⋆ (ƛ t')
-map-ƛ ✦ = ✦
-map-ƛ (r ‣ rs) = ξ-ƛ r ‣ map-ƛ rs
+ξ-·⋆ : {t t' : Γ ⊢ σ ⇒ τ}{s s' : Γ ⊢ σ} → t ⟶⋆ t' → s ⟶⋆ s' → (t · s) ⟶⋆ (t' · s')
+ξ-·⋆ {t = t} {t'} {s} {s'} t→t' s→s' = map⟶⋆ (_· s) ξ-·₁ t→t' ▷ map⟶⋆ (t' ·_) ξ-·₂ s→s'
 
-rename-ξ : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → rename ρ t ⟶ rename ρ t'
-rename-ξ ρ (same refl) = same refl
-rename-ξ ρ {(ƛ t) · s} {t'} β-ƛ = transport (λ y → ((ƛ rename (lift ρ) t) · rename ρ s) ⟶ y) (subst-rename≡rename-subst ρ t {s}) (β-ƛ {t = rename (lift ρ) t} {rename ρ s})
-rename-ξ ρ β-π₁ = β-π₁
-rename-ξ ρ β-π₂ = β-π₂
-rename-ξ ρ (ξ-app r s) = ξ-app (rename-ξ ρ r) (rename-ξ ρ s)
-rename-ξ ρ (ξ-pair r s) = ξ-pair (rename-ξ ρ r) (rename-ξ ρ s)
-rename-ξ ρ (ξ-π₁ r) = ξ-π₁ (rename-ξ ρ r)
-rename-ξ ρ (ξ-π₂ r) = ξ-π₂ (rename-ξ ρ r)
-rename-ξ ρ (ξ-ƛ r) = ξ-ƛ (rename-ξ (lift ρ) r)
-rename-ξ ρ {t} η-ƛ = transport (λ y → rename ρ t ⟶ (ƛ y · (` ze))) (≡-sym (rename-lift-weaken≡weaken-rename ρ t)) (η-ƛ {t = rename ρ t})
-rename-ξ ρ η-pair = η-pair
+ξ-ƛ⋆ : {t t' : σ ∷ Γ ⊢ τ} → t ⟶⋆ t' → (ƛ t) ⟶⋆ (ƛ t')
+ξ-ƛ⋆ = map⟶⋆ ƛ_ ξ-ƛ
 
-map-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → rename ρ t ⟶⋆ rename ρ t'
-map-rename ρ ✦ = ✦
-map-rename ρ (r ‣ rs) = rename-ξ ρ r ‣ map-rename ρ rs
+≡⟶ : {t t' s : Γ ⊢ σ} → t ≡ t' → t ⟶ s → t' ⟶ s
+≡⟶ refl t→s = t→s
 
-subst-ξ : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → subst t ts ⟶ subst t' ts
-subst-ξ ts (same refl) = same refl
-subst-ξ ts {(ƛ t) · s} β-ƛ = transport (λ y → (subst ((ƛ t) · s) ts) ⟶ y) eq β-ƛ
+⟶≡ : {t s s' : Γ ⊢ σ} → s ≡ s' → t ⟶ s → t ⟶ s'
+⟶≡ refl t→s = t→s
+
+ξ-rename : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → rename ρ t ⟶ rename ρ t'
+ξ-rename ρ β-π₁ = β-π₁
+ξ-rename ρ β-π₂ = β-π₂
+ξ-rename ρ (ξ-,₁ t→t') = ξ-,₁ (ξ-rename ρ t→t')
+ξ-rename ρ (ξ-,₂ t→t') = ξ-,₂ (ξ-rename ρ t→t')
+ξ-rename ρ (ξ-π₁ t→t') = ξ-π₁ (ξ-rename ρ t→t')
+ξ-rename ρ (ξ-π₂ t→t') = ξ-π₂ (ξ-rename ρ t→t')
+ξ-rename ρ η-, = η-,
+ξ-rename ρ {(ƛ t) · s} {t'} β-ƛ = ⟶≡ (subst-rename≡rename-subst ρ t {s}) β-ƛ
+ξ-rename ρ (ξ-·₁ t→t') = ξ-·₁ (ξ-rename ρ t→t')
+ξ-rename ρ (ξ-·₂ t→t') = ξ-·₂ (ξ-rename ρ t→t')
+ξ-rename ρ (ξ-ƛ t→t') = ξ-ƛ (ξ-rename (lift ρ) t→t')
+ξ-rename ρ {t} η-ƛ = ⟶≡ (cong (λ y → ƛ (y · (` ze))) (≡-sym (rename-lift-weaken≡weaken-rename ρ t))) η-ƛ
+
+ξ-rename⋆ : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → rename ρ t ⟶⋆ rename ρ t'
+ξ-rename⋆ ρ = map⟶⋆ (rename ρ) (ξ-rename ρ)
+
+ξ-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶ t' → subst t ts ⟶ subst t' ts
+ξ-subst ts β-π₁ = β-π₁
+ξ-subst ts β-π₂ = β-π₂
+ξ-subst ts (ξ-,₁ t→t') = ξ-,₁ (ξ-subst ts t→t')
+ξ-subst ts (ξ-,₂ t→t') = ξ-,₂ (ξ-subst ts t→t')
+ξ-subst ts (ξ-π₁ t→t') = ξ-π₁ (ξ-subst ts t→t')
+ξ-subst ts (ξ-π₂ t→t') = ξ-π₂ (ξ-subst ts t→t')
+ξ-subst ts η-, = η-,
+ξ-subst ts {(ƛ t) · s} β-ƛ = ⟶≡ eq β-ƛ
     where
         eq : (subst t (ts ↑) [ subst s ts /x]) ≡ subst (t [ s /x]) ts
         eq = (subst t (ts ↑) [ subst s ts /x])
@@ -87,19 +96,13 @@ subst-ξ ts {(ƛ t) · s} β-ƛ = transport (λ y → (subst ((ƛ t) · s) ts) �
            ≡⟨ refl ⟩ 
               subst (t [ s /x]) ts
            ∎
-subst-ξ ts β-π₁ = β-π₁
-subst-ξ ts β-π₂ = β-π₂
-subst-ξ ts (ξ-app r r') = ξ-app (subst-ξ ts r) (subst-ξ ts r')
-subst-ξ ts (ξ-pair r r') = ξ-pair (subst-ξ ts r) (subst-ξ ts r')
-subst-ξ ts (ξ-π₁ r) = ξ-π₁ (subst-ξ ts r)
-subst-ξ ts (ξ-π₂ r) = ξ-π₂ (subst-ξ ts r)
-subst-ξ ts (ξ-ƛ r) = ξ-ƛ (subst-ξ (ts ↑) r)
-subst-ξ ts {t} η-ƛ = transport (λ y → subst t ts ⟶ (ƛ y · (` ze))) (≡-sym (subst-weaken-↑ t ts)) (η-ƛ {t = subst t ts})
-subst-ξ ts η-pair = η-pair
+ξ-subst ts (ξ-·₁ t→t') = ξ-·₁ (ξ-subst ts t→t')
+ξ-subst ts (ξ-·₂ t→t') = ξ-·₂ (ξ-subst ts t→t')
+ξ-subst ts (ξ-ƛ t→t') = ξ-ƛ (ξ-subst (ts ↑) t→t')
+ξ-subst ts {t} η-ƛ = ⟶≡ (cong (λ y → ƛ (y · (` ze))) (≡-sym (subst-weaken-↑ t ts))) η-ƛ
 
-map-subst : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → subst t ts ⟶⋆ subst t' ts
-map-subst ts ✦ = ✦
-map-subst ts (r ‣ rs) = subst-ξ ts r ‣ map-subst ts rs
+ξ-subst⋆ : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → subst t ts ⟶⋆ subst t' ts
+ξ-subst⋆ ts = map⟶⋆ (λ t → subst t ts) (ξ-subst ts)
 
 data _⭆*_ : Sub Γ Δ → Sub Γ Δ → Set where
    [] : {ts ts' : Sub [] Δ} → ts ⭆* ts'
@@ -109,27 +112,27 @@ lookup⭆* : {ts ts' : Sub Γ Δ} → ∀{σ} → (x : Γ ∋ σ) → ts ⭆* ts
 lookup⭆* ze (r ∷ _) = r
 lookup⭆* (su x) (_ ∷ rs) = lookup⭆* x rs
 
-mapSub⭆* : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t ⟶⋆ t' → f t ⟶⋆ f t') → {ts ts' : Sub Γ Δ} → ts ⭆* ts' → mapSub f ts ⭆* mapSub f ts'
-mapSub⭆* psv [] = []
-mapSub⭆* psv (r ∷ rs) = psv r ∷ mapSub⭆* psv rs
+map⭆* : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t ⟶⋆ t' → f t ⟶⋆ f t') → {ts ts' : Sub Γ Δ} → ts ⭆* ts' → mapSub f ts ⭆* mapSub f ts'
+map⭆* psv [] = []
+map⭆* psv (r ∷ rs) = psv r ∷ map⭆* psv rs
 
 _⟰* : ∀{σ} → {ts ts' : Sub Γ Δ} → ts ⭆* ts' → (_↑ {σ = σ} ts) ⭆* (ts' ↑)
-rs ⟰* = ✦ ∷ mapSub⭆* (map-rename wk) rs
+rs ⟰* = ✦ ∷ map⭆* (ξ-rename⋆ wk) rs
 
-map-subst-Sub : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⭆* ts' → subst t ts ⟶⋆ subst t ts'
-map-subst-Sub (` x) rs = lookup⭆* x rs 
-map-subst-Sub yes rs = ✦
-map-subst-Sub no rs = ✦
-map-subst-Sub ⟨⟩ rs = ✦
-map-subst-Sub (t , s) rs = map-pair (map-subst-Sub t rs) (map-subst-Sub s rs)
-map-subst-Sub (π₁ t) rs = map-π₁ (map-subst-Sub t rs)
-map-subst-Sub (π₂ t) rs = map-π₂ (map-subst-Sub t rs)
-map-subst-Sub (t · s) rs = map-app (map-subst-Sub t rs) (map-subst-Sub s rs)
-map-subst-Sub (ƛ t) rs = map-ƛ (map-subst-Sub t (rs ⟰*))
+ξ-⭆* : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⭆* ts' → subst t ts ⟶⋆ subst t ts'
+ξ-⭆* (` x) rs = lookup⭆* x rs
+ξ-⭆* yes rs = ✦
+ξ-⭆* no rs = ✦
+ξ-⭆* ⟨⟩ rs = ✦
+ξ-⭆* (t , s) rs = ξ-,⋆ (ξ-⭆* t rs) (ξ-⭆* s rs)
+ξ-⭆* (π₁ t) rs = ξ-π₁⋆ (ξ-⭆* t rs)
+ξ-⭆* (π₂ t) rs = ξ-π₂⋆ (ξ-⭆* t rs)
+ξ-⭆* (t · s) rs = ξ-·⋆ (ξ-⭆* t rs) (ξ-⭆* s rs)
+ξ-⭆* (ƛ t) rs = ξ-ƛ⋆ (ξ-⭆* t (rs ⟰*))
 
 idSub⭆*idSub : ∀{Γ} → idSub {Γ} ⭆* idSub
 idSub⭆*idSub {[]} = []
 idSub⭆*idSub {σ ∷ Γ} = idSub⭆*idSub ⟰*
 
-map-/x : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s ⟶⋆ s' → (t [ s /x]) ⟶⋆ (t [ s' /x])
-map-/x t rs = map-subst-Sub t (rs ∷ idSub⭆*idSub)
+ξ-/x⋆ : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s ⟶⋆ s' → (t [ s /x]) ⟶⋆ (t [ s' /x])
+ξ-/x⋆ t rs = ξ-⭆* t (rs ∷ idSub⭆*idSub)
