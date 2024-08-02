@@ -21,6 +21,8 @@ data _⟶_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     ξ-ƛ : {t t' : σ ∷ Γ ⊢ τ} → t ⟶ t' → (ƛ t) ⟶ (ƛ t')
     η-ƛ : {t : Γ ⊢ σ ⇒ τ} → t ⟶ (ƛ (weaken {τ = σ} t · (` ze)))
 
+    η-⟨⟩ : {t : Γ ⊢ 𝟙} → t ⟶ ⟨⟩
+
 infixr 33 _‣_
 data _⟶⋆_ : Γ ⊢ σ → Γ ⊢ σ → Set where
     ✦ : {t : Γ ⊢ σ} → t ⟶⋆ t
@@ -75,6 +77,7 @@ map⟶⋆ f ξ (r ‣ rs) = ξ r ‣ map⟶⋆ f ξ rs
 ξ-rename ρ (ξ-·₂ t→t') = ξ-·₂ (ξ-rename ρ t→t')
 ξ-rename ρ (ξ-ƛ t→t') = ξ-ƛ (ξ-rename (lift ρ) t→t')
 ξ-rename ρ {t} η-ƛ = ⟶≡ (cong (λ y → ƛ (y · (` ze))) (≡-sym (rename-lift-weaken≡weaken-rename ρ t))) η-ƛ
+ξ-rename ρ η-⟨⟩ = η-⟨⟩
 
 ξ-rename⋆ : (ρ : Ren Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → rename ρ t ⟶⋆ rename ρ t'
 ξ-rename⋆ ρ = map⟶⋆ (rename ρ) (ξ-rename ρ)
@@ -106,6 +109,7 @@ map⟶⋆ f ξ (r ‣ rs) = ξ r ‣ map⟶⋆ f ξ rs
 ξ-subst ts (ξ-·₂ t→t') = ξ-·₂ (ξ-subst ts t→t')
 ξ-subst ts (ξ-ƛ t→t') = ξ-ƛ (ξ-subst (ts ↑) t→t')
 ξ-subst ts {t} η-ƛ = ⟶≡ (cong (λ y → ƛ (y · (` ze))) (≡-sym (subst-weaken-↑ t ts))) η-ƛ
+ξ-subst ts η-⟨⟩ = η-⟨⟩
 
 ξ-subst⋆ : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t ⟶⋆ t' → subst t ts ⟶⋆ subst t' ts
 ξ-subst⋆ ts = map⟶⋆ (λ t → subst t ts) (ξ-subst ts)

@@ -21,7 +21,6 @@ data Normal where
     no : ∀{Γ} → Normal Γ Ans no
     ‘_ : {a : Γ ⊢ Ans} → Neutral Γ Ans a → Normal Γ Ans a
     ⟨⟩ : ∀{Γ} → Normal Γ 𝟙 ⟨⟩
-    ‘‘_ : {a : Γ ⊢ 𝟙} → Neutral Γ 𝟙 a → Normal Γ 𝟙 a
     _,_ : {a : Γ ⊢ σ}{b : Γ ⊢ τ} → Normal Γ σ a → Normal Γ τ b → Normal Γ (σ ẋ τ) (a , b)
     ƛ_ : {t : σ ∷ Γ ⊢ τ} → Normal (σ ∷ Γ) τ t → Normal Γ (σ ⇒ τ) (ƛ t)
 
@@ -33,7 +32,6 @@ rename-nf ρ yes = yes
 rename-nf ρ no = no
 rename-nf ρ (‘ x) = ‘ rename-ne ρ x
 rename-nf ρ ⟨⟩ = ⟨⟩
-rename-nf ρ (‘‘ x) = ‘‘ rename-ne ρ x
 rename-nf ρ (n₁ , n₂) = rename-nf ρ n₁ , rename-nf ρ n₂
 rename-nf ρ (ƛ n) = ƛ rename-nf (lift ρ) n
 
