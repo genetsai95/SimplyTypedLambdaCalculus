@@ -4,128 +4,106 @@ open import STLC
 open import STLC.Conversion
 open import STLC.Normal
 
-Comp : (σ : Type) → Γ ⊢ σ → Set
-Comp {Γ} Ans t = Σ (Γ ⊢ Ans) (λ t' → (t ⟶⋆ t') × Normal Γ Ans t')
-Comp {Γ} 𝟙 t = Σ (Γ ⊢ 𝟙) (λ t' → (t ⟶⋆ t') × Normal Γ 𝟙 t')
-Comp {Γ} (σ ẋ τ) t = Σ (Γ ⊢ σ) (λ t' → Σ (Γ ⊢ τ) (λ t'' → (π₁ t ⟶⋆ t') × (π₂ t ⟶⋆ t'') × Comp σ t' × Comp τ t''))
-Comp {Γ} (σ ⇒ τ) t = Σ (Γ ⊢ σ ⇒ τ) (λ t' → (t ⟶⋆ t') × 
-                                           ((Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) 
-                                           → Σ (Θ ⊢ σ) (λ a' → (a ⟶⋆ a') × (Comp τ (rename ρ t' · a'))))
-                                    )
+-- Defining Computability Structures for each type
+Normalizable : Γ ⊢ σ → Set
+Normalizable {Γ} {σ} t = Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
 
--- substitute variables in Γ with terms under context Δ
-⟦_⟧ᶜ : Cxt → Cxt → Set
-⟦ Γ ⟧ᶜ Δ = Sub Γ Δ
+Comp : (σ : Type)(t : Γ ⊢ σ) → Set
+Comp {Γ} Ans t = Normalizable t
+Comp {Γ} 𝟙 t = Normalizable t
+Comp {Γ} (σ ẋ τ) t = Comp σ (π₁ t) × Comp τ (π₂ t)
+Comp {Γ} (σ ⇒ τ) t = (Θ : Cxt)(ρ : Ren Γ Θ)(a : Θ ⊢ σ)(u : Comp σ a) → Comp τ (rename ρ t · a)
 
-_[_] : Γ ⊢ σ → ⟦ Γ ⟧ᶜ Δ → Δ ⊢ σ
+
+-- Shift computability structure by βη-conversion
+comp-backward : (σ : Type){t t' : Γ ⊢ σ} → t ⟶ t' → Comp σ t' → Comp σ t
+comp-backward Ans t→t' (t'' , t'→t'' , nt'') = t'' , t→t' ‣ t'→t'' , nt''
+comp-backward 𝟙 t→t' _ = ⟨⟩ , η-⟨⟩ ‣ ✦ , ⟨⟩
+comp-backward (σ ẋ τ) t→t' (c₁ , c₂) = comp-backward σ (ξ-π₁ t→t') c₁ , comp-backward τ (ξ-π₂ t→t') c₂
+comp-backward (σ ⇒ τ) t→t' c = λ Θ ρ a c' → comp-backward τ (ξ-·₁ (ξ-rename ρ t→t')) (c Θ ρ a c')
+
+comp-backward⋆ : (σ : Type){t t' : Γ ⊢ σ} → t ⟶⋆ t' → Comp σ t' → Comp σ t
+comp-backward⋆ σ ✦ c = c
+comp-backward⋆ σ (t→u ‣ u→t') c = comp-backward σ t→u (comp-backward⋆ σ u→t' c)
+
+
+-- Show that renaming preserves computability structures
+rename-comp : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
+rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , ξ-rename⋆ ρ t→t' , rename-nf ρ nt'
+rename-comp {σ = 𝟙} ρ t (t' , t→t' , nt') = rename ρ t' , ξ-rename⋆ ρ t→t' , rename-nf ρ nt'
+rename-comp {σ = σ ẋ τ} ρ t (c₁ , c₂) = rename-comp ρ (π₁ t) c₁ , rename-comp ρ (π₂ t) c₂
+rename-comp {σ = σ ⇒ τ} ρ t c = λ Θ ρ' a c' → transport (λ y → Comp τ (y · a)) (rename-concatRen≡rename-rename ρ ρ' t)
+                                                        (c Θ (concatRen ρ ρ') a c')
+
+
+-- shorthand for substitution
+infix 25 _[_]
+_[_] : Γ ⊢ σ → Sub Γ Δ → Δ ⊢ σ
 t [ ts ] = subst t ts
 
-infix 25 _[_]
 
--- a list of computability structures corresponding to each term in a given substution
-data ⟦_⟧ˢ : (Γ : Cxt) → ⟦ Γ ⟧ᶜ Δ → Set where
-    [] : ∀{Δ} → ⟦ [] ⟧ˢ ([] {Δ})
-    _∷_ : ∀{σ} → {t : Δ ⊢ σ}{ts : ⟦ Γ ⟧ᶜ Δ} → Comp σ t → ⟦ Γ ⟧ˢ ts → ⟦ (σ ∷ Γ) ⟧ˢ (t ∷ ts)
+-- list of computability structures for each term in a substitution
+data ⟦_⟧ᶜ : (Γ : Cxt) → Sub Γ Δ → Set where
+    [] : ∀{Δ} → ⟦ [] ⟧ᶜ ([] {Δ})
+    _∷_ : ∀{σ} → {t : Δ ⊢ σ}{ts : Sub Γ Δ} → Comp σ t → ⟦ Γ ⟧ᶜ ts → ⟦ (σ ∷ Γ) ⟧ᶜ (t ∷ ts)
 
-lookupˢ : {ts : ⟦ Γ ⟧ᶜ Δ}(x : Γ ∋ σ) → ⟦ Γ ⟧ˢ ts → Comp σ (lookup x ts)
-lookupˢ ze (c ∷ _) = c
-lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
+lookupᶜ : {ts : Sub Γ Δ}(x : Γ ∋ σ) → ⟦ Γ ⟧ᶜ ts → Comp σ (lookup x ts)
+lookupᶜ ze (c ∷ _) = c
+lookupᶜ (su x) (_ ∷ cs) = lookupᶜ x cs
 
-mapˢ : (fₜ : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ)(fₛ : ∀{σ} → {t : Δ ⊢ σ} → Comp σ t → Comp σ (fₜ t)) → {ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (mapSub fₜ ts)
-mapˢ fₜ fₛ [] = []
-mapˢ fₜ fₛ (c ∷ cs) = fₛ c ∷ mapˢ fₜ fₛ cs
+mapᶜ : (fₜ : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ)(fₛ : ∀{σ} → {t : Δ ⊢ σ} → Comp σ t → Comp σ (fₜ t)) → {ts : Sub Γ Δ} → ⟦ Γ ⟧ᶜ ts → ⟦ Γ ⟧ᶜ (mapSub fₜ ts)
+mapᶜ fₜ fₛ [] = []
+mapᶜ fₜ fₛ (c ∷ cs) = fₛ c ∷ mapᶜ fₜ fₛ cs
 
--- renaming preserves computability structures
-rename-comp : (ρ : Ren Γ Δ)(t : Γ ⊢ σ) → Comp σ t → Comp σ (rename ρ t)
-rename-comp {σ = Ans} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
-rename-comp {σ = 𝟙} ρ t (t' , t→t' , nt') = rename ρ t' , map-rename ρ t→t' , rename-nf ρ nt'
-rename-comp {σ = σ ẋ τ} ρ t (s , s' , π₁t→s , π₂t→s' , scs , s'cs) = rename ρ s , rename ρ s' , map-rename ρ π₁t→s , map-rename ρ π₂t→s' , rename-comp ρ s scs , rename-comp ρ s' s'cs
-rename-comp {σ = σ ⇒ τ} ρ t (t' , t→t' , f) = rename ρ t' , map-rename ρ t→t' , 
-                                              λ Θ ρ' s c → let (s' , s→s' , c') = f Θ (concatRen ρ ρ') s c 
-                                                           in s' , s→s' , transport (λ y → Comp τ (y · s')) (rename-concatRen≡rename-rename ρ ρ' t') c'
-
-renameˢ : (ρ : Ren Δ Θ){ts : ⟦ Γ ⟧ᶜ Δ} → ⟦ Γ ⟧ˢ ts → ⟦ Γ ⟧ˢ (mapSub (rename ρ) ts)
-renameˢ ρ = mapˢ (rename ρ) (λ {σ} {t} → rename-comp ρ t)
-
--- mapping a substition (with the Comp for each term) to the Comp for each term after substitution
-⟦_⟧ : (t : Γ ⊢ σ) → (Δ : Cxt)(ts : Sub Γ Δ)(cs : ⟦ Γ ⟧ˢ ts) → Σ (Δ ⊢ σ) (λ t' → ((t [ ts ]) ⟶⋆ t') × Comp σ t')
-⟦ ` x ⟧ Δ ts cs = lookup x ts , ✦ , lookupˢ x cs
-⟦ yes ⟧ Δ ts cs = yes , ✦ , yes , ✦ , yes
-⟦ no ⟧ Δ ts cs = no , ✦ , no , ✦ , no
-⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , ✦ , ⟨⟩ , ✦ , ⟨⟩
-⟦ t , s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
-... | t' , t[ts]→t' , t'cs | s' , s[ts]→s' , s'cs = (t' , s') , map-pair t[ts]→t' s[ts]→s' , t' , s' , β-π₁ ‣ ✦ , β-π₂ ‣ ✦ , t'cs , s'cs
-⟦ π₁ t ⟧ Δ ts cs = let (t' , t[ts]→t' , t'' , _ , π₁t'→t'' , _ , t''cs , _ ) = ⟦ t ⟧ Δ ts cs 
-                  in t'' , map-π₁ t[ts]→t' ▷ π₁t'→t'' , t''cs
-⟦ π₂ t ⟧ Δ ts cs = let (t' , t[ts]→t' , _ , t'' , _ , π₂t'→t'' , _ , t''cs) = ⟦ t ⟧ Δ ts cs 
-                  in t'' , map-π₂ t[ts]→t' ▷ π₂t'→t'' , t''cs
-⟦ _·_ {τ = τ} t s ⟧ Δ ts cs with ⟦ t ⟧ Δ ts cs | ⟦ s ⟧ Δ ts cs
-... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , s'cs = let (s'' , s'→s'' , c) = f Δ idRen s' s'cs 
-                                                                in (t'' · s'') , 
-                                                                   map-app (t[ts]→t' ▷ t'→t'') (s[ts]→s' ▷ s'→s'') ,
-                                                                   transport (λ y → Comp τ (y · s'')) (rename-idRen t'') c
-⟦ ƛ_ {τ = Ans} t ⟧   Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                                λ Θ ρ s scs → s , ✦ ,
-                                              let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                              in t'' , β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t'' , nt''
-⟦ ƛ_ {τ = 𝟙} t ⟧     Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                                λ Θ ρ s scs → s , ✦ , 
-                                              let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , nt'') = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs)
-                                              in t'' , β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t' ▷ t'→t'' , nt''
-⟦ ƛ_ {τ = σ ẋ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                                λ Θ ρ s scs → s , ✦ ,
-                                              let (t' , t[s∷mr-ts]→t' , t₁ , t₂ , π₁t'→t₁ , π₂t'→t₂ , t₁cs , t₂cs) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs)
-                                              in t₁ , t₂ ,
-                                                 map-π₁ (β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t') ▷ π₁t'→t₁ ,
-                                                 map-π₂ (β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ t[s∷mr-ts]→t') ▷ π₂t'→t₂ ,
-                                                 t₁cs , t₂cs
-⟦ ƛ_ {τ = σ ⇒ τ} t ⟧ Δ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                                λ Θ ρ s scs → s , ✦ ,
-                                              let (t' , t[s∷mr-ts]→t' , t'' , t'→t'' , f) = ⟦ t ⟧ Θ (s ∷ mapSub (rename ρ) ts) (scs ∷ renameˢ ρ cs) 
-                                              in t'' , (β-ƛ ‣ same (subst-rename-lift-subst ρ ts t s) ‣ ✦) ▷ t[s∷mr-ts]→t' ▷ t'→t'' ,
-                                                 λ Θ' ρ' s' c → f Θ' ρ' s' c
+renameᶜ : (ρ : Ren Δ Θ){ts : Sub Γ Δ} → ⟦ Γ ⟧ᶜ ts → ⟦ Γ ⟧ᶜ (mapSub (rename ρ) ts)
+renameᶜ ρ cs = mapᶜ (rename ρ) (λ {σ} {t} → rename-comp ρ t) cs
 
 
--- ⇓ generates normal form from Comp
--- ⇑ generates Comp from neutral forms
-⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(u : Comp σ t) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
+-- Define computability morphisms assigned for each term
+⟦_⟧ : (t : Γ ⊢ σ)(Δ : Cxt)(ts : Sub Γ Δ)(cs : ⟦ Γ ⟧ᶜ ts) → Comp σ (t [ ts ])
+⟦ ` x ⟧ Δ ts cs = lookupᶜ x cs
+⟦ yes ⟧ Δ ts cs = yes , ✦ , yes
+⟦ no ⟧ Δ ts cs = no , ✦ , no
+⟦ ⟨⟩ ⟧ Δ ts cs = ⟨⟩ , ✦ , ⟨⟩
+⟦ t , s ⟧ Δ ts cs = comp-backward _ β-π₁ (⟦ t ⟧ Δ ts cs) , comp-backward _ β-π₂ (⟦ s ⟧ Δ ts cs)
+⟦ π₁ t ⟧ Δ ts cs = pr₁ (⟦ t ⟧ Δ ts cs)
+⟦ π₂ t ⟧ Δ ts cs = pr₂ (⟦ t ⟧ Δ ts cs)
+⟦ _·_ {_} {σ} {τ} t s ⟧ Δ ts cs = transport (λ y → Comp τ (y · (s [ ts ]))) (rename-idRen (t [ ts ]))
+                                           (⟦ t ⟧ Δ ts cs _ idRen (s [ ts ]) (⟦ s ⟧ Δ ts cs))
+⟦ ƛ_ {τ = τ} t ⟧ Δ ts cs = λ Θ ρ a c → comp-backward _ β-ƛ 
+                                                    (transport (Comp τ) (≡-sym (subst-rename-lift-subst ρ ts t a)) 
+                                                    (⟦ t ⟧ Θ (a ∷ mapSub (rename ρ) ts) (c ∷ renameᶜ ρ cs)))
+
+
+-- Define reification ⇓ and reflection ⇑
+⇓ : (Γ : Cxt)(σ : Type){t : Γ ⊢ σ}(c : Comp σ t) → Normalizable t
 ⇑ : (Γ : Cxt)(σ : Type) → ((t , _) : Σ (Γ ⊢ σ) (Neutral Γ σ)) → Comp σ t
 
 ⇓ Γ Ans c = c
 ⇓ Γ 𝟙 c = c
-⇓ Γ (σ ẋ τ) (t₁ , t₂ , π₁t→t₁ , π₂t→t₂ , t₁cs , t₂cs) with ⇓ Γ σ {t₁} t₁cs | ⇓ Γ τ {t₂} t₂cs
-... | t₁' , t₁→t₁' , nt₁' | t₂' , t₂→t₂' , nt₂' = (t₁' , t₂') , η-pair ‣ map-pair (π₁t→t₁ ▷ t₁→t₁') (π₂t→t₂ ▷ t₂→t₂') , (nt₁' , nt₂')
-⇓ Γ (σ ⇒ τ) (n , t→n , f) = let (z , `ze→z , c) = f (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))) 
-                            in let (t' , wk-n·z→t' , nt') = ⇓ (σ ∷ Γ) τ c 
-                               in (ƛ t') , t→n ▷ (η-ƛ ‣ (map-ƛ (map-app ✦ `ze→z ▷ wk-n·z→t'))) , (ƛ nt')
+⇓ Γ (σ ẋ τ) (c₁ , c₂) with ⇓ Γ σ c₁ | ⇓ Γ τ c₂
+... | t₁ , π₁t→t₁ , n₁ | t₂ , π₂t→t₂ , n₂ = (t₁ , t₂) , η-, ‣ ξ-,⋆ π₁t→t₁ π₂t→t₂ , (n₁ , n₂)
+⇓ Γ (σ ⇒ τ) {t} c with ⇓ (σ ∷ Γ) τ (c (σ ∷ Γ) wk (` ze) (⇑ (σ ∷ Γ) σ ((` ze) , (` ze))))
+... | t' , weaken-t·`ze→t' , nt' = (ƛ t') , η-ƛ ‣ ξ-ƛ⋆ weaken-t·`ze→t' , (ƛ nt')
 
-⇑ Γ Ans (n , ne) = n , ✦ , (‘ ne)
-⇑ Γ 𝟙 (n , ne) = n , ✦ , (‘‘ ne)
-⇑ Γ (σ ẋ τ) (n , ne) = π₁ n , π₂ n , ✦ , ✦ , ⇑ Γ σ (π₁ n , π₁ ne) , ⇑ Γ τ (π₂ n , π₂ ne)
-⇑ Γ (σ ⇒ τ) (n , ne) = n , ✦ , λ Θ ρ s c → let (s' , s→s' , ns') = ⇓ Θ σ {s} c 
-                                           in s' , s→s' , ⇑ Θ τ ((rename ρ n · s') , (rename-ne ρ ne · ns'))
+⇑ Γ Ans (t , ne) = t , ✦ , (‘ ne)
+⇑ Γ 𝟙 (t , ne) = ⟨⟩ , η-⟨⟩ ‣ ✦ , ⟨⟩
+⇑ Γ (σ ẋ τ) (t , ne) = ⇑ Γ σ (π₁ t , π₁ ne) , ⇑ Γ τ (π₂ t , π₂ ne)
+⇑ Γ (σ ⇒ τ) (t , ne) = λ Θ ρ a c → let (a' , a→a' , na') = ⇓ Θ σ {a} c
+                                   in comp-backward⋆ τ (ξ-·⋆ ✦ a→a') (⇑ Θ τ ((rename ρ t · a') , (rename-ne ρ ne · na')))
 
-⇑ˢ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ˢ ts
-⇑ˢ [] Δ [] [] = []
+
+-- reflection for each term in a neutral substitution
+⇑ˢ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ᶜ ts
+⇑ˢ [] Δ .[] [] = []
 ⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
 
--- evaluate the computability structure for each term
-eval : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Comp σ t')
-eval {Γ} t = let (t' , t[id]→t' , t'cs) = ⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral) 
-             in t' , transport (λ y → y ⟶⋆ t') (subst-idSub {t = t}) t[id]→t' , t'cs
-
--- normalization by first evaluate a term to its Comp and extract normal form from it
-normalize : (t : Γ ⊢ σ) → Σ (Γ ⊢ σ) (λ t' → (t ⟶⋆ t') × Normal Γ σ t')
-normalize {Γ} {σ} t = let (t' , t→t' , t'cs) = eval t 
-                       in let (t'' , t'→t'' , nt'') = ⇓ Γ σ t'cs 
-                          in t'' , t→t' ▷ t'→t'' , nt''
-
-test : [] ⊢ Ans
-test = π₁ (((ƛ (` ze)) · yes) , no)
-
-test' : (𝟙 ẋ Ans) ∷ [] ⊢ Ans
-test' = π₂ (π₁ (π₂ (⟨⟩ , (` ze)) , no))
+ 
+--  evaluate a term to its computability structure
+eval : (t : Γ ⊢ σ) → Comp σ t
+eval {Γ} {σ} t = transport (Comp σ) (subst-idSub {t = t}) (⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral))
 
 
-_ : {A : Set} → {f : ⊤ → A} → (λ x → f `nil) ≡ f
-_ = refl
+-- normalization by evaluation
+normalize : (t : Γ ⊢ σ) → Normalizable t
+normalize {Γ} {σ} t = ⇓ Γ σ (eval t)

@@ -1,4 +1,4 @@
-module NaïveNormalization' where
+module NaïveNormalization-old where
 
 open import STLC
 open import STLC.Conversion
