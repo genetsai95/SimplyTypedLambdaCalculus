@@ -4,76 +4,56 @@ open import Prelude
 open import STLC
 open import STLC.Reduction
 
--- context -> list of closed terms with corresponding types
-⟦_⟧ᶜ : Cxt → Set
-⟦ Γ ⟧ᶜ = Sub Γ []
-
 
 -- closed term substitution
-_[_] :  Γ ⊢ σ → ⟦ Γ ⟧ᶜ → [] ⊢ σ
+_[_] :  Γ ⊢ σ → Sub Γ [] → [] ⊢ σ
 t [ ts ] = subst t ts
 
--- computability structure
+-- Define computability structure of canonicity for each type
 Comp : (σ : Type) → [] ⊢ σ → Set
-Comp Ans t = Σ ([] ⊢ Ans) (λ t' → (t →β* t') × ((t' ≡ yes) ⊎ (t' ≡ no)))
+Comp Ans t = (t →β* yes) ⊎ (t →β* no)
 Comp 𝟙 t = ⊤
-Comp (σ ⇒ τ) t = Σ ([] ⊢ σ ⇒ τ) (λ t' → (t →β* t') × ((a : [] ⊢ σ)(u : Comp σ a) → Comp τ (t' · a)))
-Comp (σ ẋ τ) t = Σ ([] ⊢ σ) (λ t' → Σ ([] ⊢ τ) (λ t'' → ((π₁ t →β* t') × (π₂ t →β* t'') × Comp σ t' × Comp τ t'')))
+Comp (σ ẋ τ) t = Comp σ (π₁ t) × Comp τ (π₂ t)
+Comp (σ ⇒ τ) t = (a : [] ⊢ σ)(c : Comp σ a) → Comp τ (t · a)
 
+-- Shift computability structure by β-reduction
+comp-backward : (σ : Type){t t' : [] ⊢ σ} → t →β t' → Comp σ t' → Comp σ t
+comp-backward Ans t→t' (inl t'→yes) = inl (t→t' ‣ t'→yes)
+comp-backward Ans t→t' (inr t'→no) = inr (t→t' ‣ t'→no)
+comp-backward 𝟙 t→t' _ = `nil
+comp-backward (σ ẋ τ) t→t' (c₁ , c₂) = comp-backward σ (ξ-π₁ t→t') c₁ , comp-backward τ (ξ-π₂ t→t') c₂
+comp-backward (σ ⇒ τ) t→t' c = λ a c' → comp-backward τ (ξ-·₁ t→t') (c a c')
 
--- context -> corresponding computability structures for closed terms
-data ⟦_⟧ˢ : (Γ : Cxt) → ⟦ Γ ⟧ᶜ → Set where
-    [] : ⟦ [] ⟧ˢ []
-    _∷_ : ∀{σ} → {t : [] ⊢ σ}{ts : ⟦ Γ ⟧ᶜ} → Comp σ t → ⟦ Γ ⟧ˢ ts → ⟦ (σ ∷ Γ) ⟧ˢ (t ∷ ts)
+-- list of corresponding computability structures for closed terms
+data ⟦_⟧ᶜ : (Γ : Cxt) → Sub Γ [] → Set where
+    [] : ⟦ [] ⟧ᶜ []
+    _∷_ : ∀{σ} → {t : [] ⊢ σ}{ts : Sub Γ []} → Comp σ t → ⟦ Γ ⟧ᶜ ts → ⟦ (σ ∷ Γ) ⟧ᶜ (t ∷ ts)
 
-lookupˢ : {ts : ⟦ Γ ⟧ᶜ}(x : Γ ∋ σ) → ⟦ Γ ⟧ˢ ts → Comp σ (lookup x ts)
-lookupˢ ze (c ∷ _) = c
-lookupˢ (su x) (_ ∷ cs) = lookupˢ x cs
+lookupᶜ : {ts : Sub Γ []}(x : Γ ∋ σ) → ⟦ Γ ⟧ᶜ ts → Comp σ (lookup x ts)
+lookupᶜ ze (c ∷ _) = c
+lookupᶜ (su x) (_ ∷ cs) = lookupᶜ x cs
 
+-- assign computability morphism for each term
+⟦_⟧ : (t : Γ ⊢ σ)(ts : Sub Γ [])(cs : ⟦ Γ ⟧ᶜ ts) → Comp σ (t [ ts ])
+⟦ ` x ⟧ ts cs = lookupᶜ x cs
+⟦ yes ⟧ ts cs = inl ✦
+⟦ no ⟧ ts cs = inr ✦
+⟦ ⟨⟩ ⟧ ts cs = `nil
+⟦ t , s ⟧ ts cs = comp-backward _ β-π₁ (⟦ t ⟧ ts cs) , comp-backward _ β-π₂ (⟦ s ⟧ ts cs)
+⟦ π₁ t ⟧ ts cs = pr₁ (⟦ t ⟧ ts cs)
+⟦ π₂ t ⟧ ts cs = pr₂ (⟦ t ⟧ ts cs)
+⟦ t · s ⟧ ts cs = ⟦ t ⟧ ts cs (s [ ts ]) (⟦ s ⟧ ts cs)
+⟦ ƛ t ⟧ ts cs = λ a c →  comp-backward _ β-ƛ (transport (Comp _) (≡-sym (lem[sub1] t ts a)) (⟦ t ⟧ (a ∷ ts) (c ∷ cs)))
 
-
--- computability morphism
-⟦_⟧ : (t : Γ ⊢ σ) → (ts : ⟦ Γ ⟧ᶜ)(cs : ⟦ Γ ⟧ˢ ts) → Σ ([] ⊢ σ) (λ t' → ((t [ ts ]) →β* t') × Comp σ t')
-⟦ ` x ⟧ ts cs = ((` x) [ ts ]) , ✦ , lookupˢ x cs
-⟦ yes ⟧ ts cs = yes , ✦ , yes , ✦ , inl refl
-⟦ no ⟧ ts cs = no , ✦ , no , ✦ , inr refl
-⟦ ⟨⟩ ⟧ ts cs = ⟨⟩ , ✦ , `nil
-⟦ t , s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , tcs | s' , s[ts]→s' , scs = (t' , s') , ξ-,* t[ts]→t' s[ts]→s' , t' , s' , β-π₁ ‣ ✦ , β-π₂ ‣ ✦ , tcs , scs
-⟦ π₁ t ⟧ ts cs with ⟦ t ⟧ ts cs
-... | t' , t[ts]→t' , t'' , _ , π₁t'→t'' , _ , t''cs , _ = t'' , ξ-π₁* t[ts]→t' ▷ π₁t'→t'' , t''cs
-⟦ π₂ t ⟧ ts cs with ⟦ t ⟧ ts cs
-... | t' , t[ts]→t' , _ , t'' , _ , π₂t'→t'' , _ , t''cs = t'' , ξ-π₂* t[ts]→t' ▷ π₂t'→t'' , t''cs
-⟦ t · s ⟧ ts cs with ⟦ t ⟧ ts cs | ⟦ s ⟧ ts cs
-... | t' , t[ts]→t' , t'' , t'→t'' , f | s' , s[ts]→s' , scs = (t'' · s') , ξ-·* (t[ts]→t' ▷ t'→t'') s[ts]→s' , f s' scs
-⟦ ƛ_ {τ = Ans} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                          λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→t''' , eq) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs) 
-                                   in t''' , (→β≡ (lem[sub1] t ts t') β-ƛ ‣ ✦) ▷ t[t'∷ts]→t'' ▷ t''→t''' , eq
-⟦ ƛ_ {τ = 𝟙} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , ((ƛ t) [ ts ]) , ✦ , λ t' c → `nil
-⟦ ƛ_ {τ = τ ẋ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                              λ t' c → let (t'' , t[t'∷ts]→t'' , s , s' , π₁t''→s , π₂t''→s' , scs , s'cs) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs)
-                                       in s , s' ,
-                                          ξ-π₁* ((→β≡ (lem[sub1] t ts t') β-ƛ ‣ ✦) ▷ t[t'∷ts]→t'') ▷ π₁t''→s ,
-                                          ξ-π₂* ((→β≡ (lem[sub1] t ts t') β-ƛ ‣ ✦) ▷ t[t'∷ts]→t'') ▷ π₂t''→s' , scs , s'cs
-⟦ ƛ_ {τ = τ ⇒ τ'} t ⟧ ts cs = ((ƛ t) [ ts ]) , ✦ , (ƛ subst t (ts ↑)) , ✦ , 
-                              λ t' c → let (t'' , t[t'∷ts]→t'' , t''' , t''→t''' , f) = ⟦ t ⟧ (t' ∷ ts) (c ∷ cs)
-                                       in t''' , (→β≡ (lem[sub1] t ts t') β-ƛ ‣ ✦) ▷ t[t'∷ts]→t'' ▷ t''→t''' , λ s c' → f s c'
-
--- canonicity   
+-- empty substitution is identity
 [[]] : (t : [] ⊢ σ) → (t [ [] ]) ≡ t
-[[]] yes = refl
-[[]] no = refl
-[[]] ⟨⟩ = refl
-[[]] (t , s) = pair-term-≡ ([[]] t) ([[]] s)
-[[]] (π₁ t) = cong π₁ ([[]] t)
-[[]] (π₂ t) = cong π₂ ([[]] t)
-[[]] (ƛ t) = cong ƛ_ subst-idSub
-[[]] (t · s) = app-term-≡ ([[]] t) ([[]] s)
+[[]] t = subst-idSub {t = t}
 
+-- Proving canonicity
 thm[canonicity] : (t : [] ⊢ Ans) → ([] ⊢ t ≐ yes ∶ Ans) ⊎ ([] ⊢ t ≐ no ∶ Ans)
 thm[canonicity] t with ⟦ t ⟧ [] []
-... | t' , t[[]]→t' , .yes , t'→yes , inl refl = inl (β-red (≡→β* ([[]] t) t[[]]→t' ▷ t'→yes))
-... | t' , t[[]]→t' , .no , t'→no , inr refl = inr (β-red (≡→β* ([[]] t) t[[]]→t' ▷ t'→no))
+... | inl t[[]]→yes = inl (β-red (≡→β* ([[]] t) t[[]]→yes))
+... | inr t[[]]→no  = inr (β-red (≡→β* ([[]] t) t[[]]→no))
 
 test-term : [] ⊢ Ans
 test-term = π₁ (yes , no)
