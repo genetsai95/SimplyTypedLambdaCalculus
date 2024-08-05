@@ -51,6 +51,10 @@ renameᶜ-wk cs {c} = renameᶜ wk (c ∷ cs)
                   ≡⟨ renameᶜ-mapRen-su idRen cs ⟩ renameᶜ idRen cs
                   ≡⟨ renameᶜ-idRen cs ⟩ cs ∎
 
+-- assume function extensionality
+postulate
+    fx : {X : Set}{Y : X → Set}{f g : (x : X) → Y x} → ((x : X) → f x ≡ g x) → f ≡ g
+
 -- interpretation of terms
 ⟦_⟧ : Γ ⊢ σ → ⟦ Γ ⟧ᶜ → ⟦ σ ⟧ᵗ
 ⟦ ` x ⟧ ts = lookupCxt x ts

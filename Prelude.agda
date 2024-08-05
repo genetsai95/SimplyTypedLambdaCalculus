@@ -98,9 +98,6 @@ _∘_ : {A : Set}{B : A → Set}{C : (a : A) → B a → Set} → ({a : A}(b : B
 id : {X : Set} → X → X
 id x = x
 
-postulate
-    fx : {X : Set}{Y : X → Set}{f g : (x : X) → Y x} → ((x : X) → f x ≡ g x) → f ≡ g
-
 _=f=_ : {A : Set}{B : A → Set} → ((a : A) → B a) → ((a : A) → B a) → Set
 _=f=_ {A = A} f g = (x : A) → f x ≡ g x
 
