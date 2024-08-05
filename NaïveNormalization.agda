@@ -94,14 +94,14 @@ renameᶜ ρ cs = mapᶜ (rename ρ) (λ {σ} {t} → rename-comp ρ t) cs
 
 
 -- reflection for each term in a neutral substitution
-⇑ˢ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ᶜ ts
-⇑ˢ [] Δ .[] [] = []
-⇑ˢ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ˢ Γ Δ ts ns
+⇑ᶜ : (Γ Δ : Cxt)(ts : Sub Γ Δ) → NeutralSub ts → ⟦ Γ ⟧ᶜ ts
+⇑ᶜ [] Δ .[] [] = []
+⇑ᶜ (σ ∷ Γ) Δ (t ∷ ts) (nt ∷ ns) = ⇑ Δ σ (t , nt) ∷ ⇑ᶜ Γ Δ ts ns
 
- 
+
 --  evaluate a term to its computability structure
 eval : (t : Γ ⊢ σ) → Comp σ t
-eval {Γ} {σ} t = transport (Comp σ) (subst-idSub {t = t}) (⟦ t ⟧ Γ idSub (⇑ˢ Γ Γ idSub idSub-is-neutral))
+eval {Γ} {σ} t = transport (Comp σ) (subst-idSub {t = t}) (⟦ t ⟧ Γ idSub (⇑ᶜ Γ Γ idSub idSub-is-neutral))
 
 
 -- normalization by evaluation
