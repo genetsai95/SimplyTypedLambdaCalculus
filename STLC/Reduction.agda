@@ -108,45 +108,8 @@ map→β* f ξ (r ‣ rs) = ξ r ‣ map→β* f ξ rs
 ξ-subst* : (ts : Sub Γ Δ){t t' : Γ ⊢ σ} → t →β* t' → subst t ts →β* subst t' ts
 ξ-subst* ts = map→β* (λ t → subst t ts) (ξ-subst ts)
 
+
 -- β-reduction of substitutions
-
--- data _⇛β_ : Sub Γ Δ → Sub Γ Δ → Set where
---    [] : {ts ts' : Sub [] Δ} → ts ⇛β ts'
---    _∷_ : {t t' : Δ ⊢ σ}{ts ts' : Sub Γ Δ} → t →β t' → ts ⇛β ts' → (t ∷ ts) ⇛β (t' ∷ ts')
-
--- lookup⇛β : {ts ts' : Sub Γ Δ}{σ : Type}(x : Γ ∋ σ) → ts ⇛β ts' → lookup x ts →β lookup x ts'
--- lookup⇛β ze (r ∷ rs) = r
--- lookup⇛β (su x) (r ∷ rs) = lookup⇛β x rs
-
--- mapSub⇛β : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t →β t' → f t →β f t') → {ts ts' : Sub Γ Δ} → ts ⇛β ts' → mapSub f ts ⇛β mapSub f ts'
--- mapSub⇛β psv [] = []
--- mapSub⇛β psv (r ∷ rs) = psv r ∷ mapSub⇛β psv rs
-
--- _⤊β : ∀{σ} → {ts ts' : Sub Γ Δ} → ts ⇛β ts' → (_↑ {σ = σ} ts) ⇛β (ts' ↑)
--- rs ⤊β = same refl ∷ mapSub⇛β (rename-ξ wk) rs
-
--- idSub⇛βidSub : ∀{Γ} → idSub {Γ} ⇛β idSub
--- idSub⇛βidSub {[]} = []
--- idSub⇛βidSub {σ ∷ Γ} = idSub⇛βidSub ⤊β
-
--- subst-Sub-ξ : (t : Γ ⊢ σ){ts ts' : Sub Γ Δ} → ts ⇛β ts' → subst t ts →β subst t ts'
--- subst-Sub-ξ (` x) rs = lookup⇛β x rs
--- subst-Sub-ξ yes rs = same refl
--- subst-Sub-ξ no rs = same refl
--- subst-Sub-ξ ⟨⟩ rs = same refl
--- subst-Sub-ξ (t , s) rs = ξ-pair (subst-Sub-ξ t rs) (subst-Sub-ξ s rs)
--- subst-Sub-ξ (π₁ t) rs = ξ-π₁ (subst-Sub-ξ t rs)
--- subst-Sub-ξ (π₂ t) rs = ξ-π₂ (subst-Sub-ξ t rs)
--- subst-Sub-ξ (t · s) rs = ξ-app (subst-Sub-ξ t rs) (subst-Sub-ξ s rs)
--- subst-Sub-ξ (ƛ t) rs = ξ-ƛ (subst-Sub-ξ t (rs ⤊β)) 
-
--- /x-ξ : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β s' → (t [ s /x]) →β (t [ s' /x])
--- /x-ξ t r = subst-Sub-ξ t (r ∷ idSub⇛βidSub)
-
--- /x-ξ* : (t : σ ∷ Γ ⊢ τ){s s' : Γ ⊢ σ} → s →β* s' → (t [ s /x]) →β* (t [ s' /x])
--- /x-ξ* t ✦ = ✦
--- /x-ξ* t (r ‣ rs) = /x-ξ t r ‣ /x-ξ* t rs
-
 data _⇛β*_ : Sub Γ Δ → Sub Γ Δ → Set where
    [] : {ts ts' : Sub [] Δ} → ts ⇛β* ts'
    _∷_ : {t t' : Δ ⊢ σ}{ts ts' : Sub Γ Δ} → t →β* t' → ts ⇛β* ts' → (t ∷ ts) ⇛β* (t' ∷ ts')
@@ -154,22 +117,6 @@ data _⇛β*_ : Sub Γ Δ → Sub Γ Δ → Set where
 lookup⇛β* : {ts ts' : Sub Γ Δ}{σ : Type}(x : Γ ∋ σ) → ts ⇛β* ts' → lookup x ts →β* lookup x ts'
 lookup⇛β* ze (r ∷ _) = r
 lookup⇛β* (su x) (_ ∷ rs) = lookup⇛β* x rs
-
--- _✴ : {ts ts' : Sub Γ Δ} → ts ⇛β ts' → ts ⇛β* ts'
--- [] ✴ = []
--- (r ∷ rs) ✴ = (r ‣ ✦) ∷ (rs ✴)
-
--- ✦✦ : {ts : Sub Γ Δ} → ts ⇛β* ts
--- ✦✦ {ts = []} = [] 
--- ✦✦ {ts = t ∷ ts} = ✦ ∷ ✦✦
-
--- _‣‣_ : {ts ts' ts'' : Sub Γ Δ} → ts ⇛β ts' → ts' ⇛β* ts'' → ts ⇛β* ts''
--- [] ‣‣ _ = [] 
--- (r ∷ rs) ‣‣ (r' ∷ rs') = (r ‣ r') ∷ (rs ‣‣ rs')
-
--- _▷▷_ : {ts ts' ts'' : Sub Γ Δ} → ts ⇛β* ts' → ts' ⇛β* ts'' → ts ⇛β* ts''
--- [] ▷▷ _ = []
--- (r₁ ∷ rs₁) ▷▷ (r₂ ∷ rs₂) = (r₁ ▷ r₂) ∷ (rs₁ ▷▷ rs₂)
 
 map⇛β* : {f : ∀{σ} → Δ ⊢ σ → Θ ⊢ σ} → (∀{σ} → {t t' : Δ ⊢ σ} → t →β* t' → f t →β* f t') → {ts ts' : Sub Γ Δ} → ts ⇛β* ts' → mapSub f ts ⇛β* mapSub f ts'
 map⇛β* psv [] = []
