@@ -1,4 +1,4 @@
-module Normalization-LR where
+module Normalization-without-η where
 
 open import STLC
 open import STLC.Reduction
