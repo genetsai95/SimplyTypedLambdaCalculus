@@ -5,6 +5,7 @@ open import STLC.Base
 open import STLC.TermEquationalReasonings
 open import STLC.Renaming
 open import STLC.Substitution
+open import STLC.Reduction
 
 -- definition of neutral and normal forms
 data Neutral : (Γ : Cxt)(σ : Type) → Γ ⊢ σ → Set
@@ -70,3 +71,19 @@ neutralsub-is-normalsub (n ∷ ns) = (‘ n) ∷ neutralsub-is-normalsub ns
 
 idSub-is-normal : ∀{Γ} → NormalSub (idSub {Γ})
 idSub-is-normal = neutralsub-is-normalsub idSub-is-neutral
+
+-- normal and neutral forms are irreducible
+nf↛β : {t : Γ ⊢ σ} → Normal Γ σ t → t ↛β
+ne↛β : {t : Γ ⊢ σ} → Neutral Γ σ t → t ↛β
+nf↛β yes = λ ()
+nf↛β no = λ () 
+nf↛β (‘ ne) = ne↛β ne
+nf↛β ⟨⟩ = λ ()
+nf↛β (nt , nt') (ξ-,₁ t→s) = nf↛β nt t→s
+nf↛β (nt , nt') (ξ-,₂ t'→s) = nf↛β nt' t'→s
+nf↛β (ƛ nf) (ξ-ƛ t→s) = nf↛β nf t→s
+ne↛β (` x) = λ () 
+ne↛β (π₁ ne) (ξ-π₁ t→s) = ne↛β ne t→s
+ne↛β (π₂ ne) (ξ-π₂ t→s) = ne↛β ne t→s
+ne↛β (nt · nt') (ξ-·₁ t→s) = ne↛β nt t→s
+ne↛β (nt · nt') (ξ-·₂ t'→s) = nf↛β nt' t'→s
