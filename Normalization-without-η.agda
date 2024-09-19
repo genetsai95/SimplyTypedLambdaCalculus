@@ -107,3 +107,9 @@ normalize {Γ} {σ} t = reify (eval t)
 -- test term
 test-term : [] ⊢ Ans
 test-term = (ƛ (` ze)) · (π₁ (π₂ (yes , ((ƛ (` ze)) · no)) , ⟨⟩))
+
+test-term2 : 𝟙 ∷ [] ⊢ 𝟙 ẋ 𝟙
+test-term2 = (` ze) , ⟨⟩
+
+test-term3 : 𝟙 ∷ [] ⊢ Ans ⇒ 𝟙
+test-term3 = (ƛ ((ƛ (` su ze)) · no)) · ((ƛ (ƛ (` su ze))) · (` ze)) -- (λx. (λy. x) no) ((λzw. z) u) 

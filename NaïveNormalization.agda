@@ -107,3 +107,13 @@ eval {Γ} {σ} t = transport (Comp σ) (subst-idSub {t = t}) (⟦ t ⟧ Γ idSub
 -- normalization by evaluation
 normalize : (t : Γ ⊢ σ) → Normalizable t
 normalize {Γ} {σ} t = ⇓ Γ σ (eval t)
+
+-- test terms
+test-term : [] ⊢ Ans
+test-term = (ƛ (` ze)) · (π₁ (π₂ (yes , ((ƛ (` ze)) · no)) , ⟨⟩))
+
+test-term2 : 𝟙 ∷ [] ⊢ 𝟙 ẋ 𝟙
+test-term2 = (` ze) , ⟨⟩
+
+test-term3 : 𝟙 ∷ [] ⊢ Ans ⇒ 𝟙
+test-term3 = (ƛ ((ƛ (` su ze)) · no)) · ((ƛ (ƛ (` su ze))) · (` ze)) -- (λx. (λy. x) no) ((λzw. z) u) 
